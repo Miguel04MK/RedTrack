@@ -11,16 +11,18 @@ import com.miguelalvarez.redtrack.dominio.modelo.ResumenDiario;
 import com.miguelalvarez.redtrack.dominio.modelo.Seniority;
 import com.miguelalvarez.redtrack.dominio.puerto.Notificador;
 import com.miguelalvarez.redtrack.dominio.puerto.RepositorioOfertas;
+import com.miguelalvarez.redtrack.dominio.servicio.Accesibilidad;
+import com.miguelalvarez.redtrack.dominio.servicio.ClasificadorDeOfertas;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,37 +38,70 @@ class GenerarResumenDiarioUseCaseTest {
     private final RepositorioFalso repositorio = new RepositorioFalso();
     private final NotificadorFalso notificador = new NotificadorFalso();
 
-    private final GenerarResumenDiarioUseCase useCase =
-            new GenerarResumenDiarioUseCase(repositorio, notificador, reloj);
+    private final GenerarResumenDiarioUseCase useCase = new GenerarResumenDiarioUseCase(
+            repositorio,
+            new ClasificadorDeOfertas(new Accesibilidad()),
+            notificador,
+            reloj);
 
     @Test
-    @DisplayName("si el envio se confirma, marca las ofertas por su huella")
-    void envioCorrectoMarcaLasOfertas() {
-        repositorio.pendientes = List.of(analizada("huella-a", 87), analizada("huella-b", 62));
+    @DisplayName("reparte las ofertas entre las dos secciones")
+    void reparteEnDosSecciones() {
+        repositorio.pendientes = List.of(
+                deTuStack("huella-a", 87),
+                juniorDeOtroStack("huella-b"),
+                senior("huella-c"));
         notificador.vaAFuncionar = true;
 
         ResumenDiario resumen = useCase.ejecutar(perfil());
 
-        assertThat(resumen.cuantas()).isEqualTo(2);
-        assertThat(notificador.enviados).hasSize(1);
-        assertThat(repositorio.marcadas).containsExactlyInAnyOrder("huella-a", "huella-b");
+        assertThat(resumen.paraTi()).extracting(o -> o.oferta().huella())
+                .containsExactly("huella-a");
+        assertThat(resumen.podrianInteresarte()).extracting(o -> o.oferta().huella())
+                .containsExactly("huella-b");
+    }
+
+    @Test
+    @DisplayName("una oferta senior no entra en ninguna de las dos secciones")
+    void laSeniorNoEntraEnNinguna() {
+        repositorio.pendientes = List.of(senior("huella-c"));
+
+        ResumenDiario resumen = useCase.ejecutar(perfil());
+
+        assertThat(resumen.estaVacio()).isTrue();
+    }
+
+    @Test
+    @DisplayName("si el envio se confirma, marca TODAS las evaluadas, entren o no")
+    void marcaTodasLasEvaluadas() {
+        repositorio.pendientes = List.of(
+                deTuStack("huella-a", 87),
+                juniorDeOtroStack("huella-b"),
+                senior("huella-c"));
+        notificador.vaAFuncionar = true;
+
+        useCase.ejecutar(perfil());
+
+        // Tambien la senior: el veredicto es determinista, evaluarla otra vez
+        // manana daria lo mismo y el conjunto de pendientes creceria sin fin.
+        assertThat(repositorio.marcadas)
+                .containsExactlyInAnyOrder("huella-a", "huella-b", "huella-c");
         assertThat(repositorio.cuando).isEqualTo(AHORA);
     }
 
     @Test
     @DisplayName("si el envio falla NO marca nada: manana se reintentan")
     void envioFallidoNoMarcaNada() {
-        repositorio.pendientes = List.of(analizada("huella-a", 87));
+        repositorio.pendientes = List.of(deTuStack("huella-a", 87));
         notificador.vaAFuncionar = false;
 
         useCase.ejecutar(perfil());
 
-        // Lo importante: no se pierden. Siguen pendientes para la proxima vez.
         assertThat(repositorio.marcadas).isEmpty();
     }
 
     @Test
-    @DisplayName("sin ofertas nuevas no se envia nada")
+    @DisplayName("sin nada que enviar no se llama al notificador")
     void sinOfertasNoSeEnvia() {
         repositorio.pendientes = List.of();
 
@@ -74,33 +109,20 @@ class GenerarResumenDiarioUseCaseTest {
 
         assertThat(resumen.estaVacio()).isTrue();
         assertThat(notificador.enviados).isEmpty();
-        assertThat(repositorio.marcadas).isEmpty();
     }
 
     @Test
-    @DisplayName("el resumen sale ordenado de mayor a menor encaje")
+    @DisplayName("cada seccion sale ordenada de mayor a menor encaje")
     void ordenadoPorEncaje() {
         repositorio.pendientes = List.of(
-                analizada("huella-baja", 58),
-                analizada("huella-alta", 91),
-                analizada("huella-media", 70));
+                deTuStack("baja", 58), deTuStack("alta", 91), deTuStack("media", 70));
         notificador.vaAFuncionar = true;
 
         ResumenDiario resumen = useCase.ejecutar(perfil());
 
-        assertThat(resumen.ofertas())
+        assertThat(resumen.paraTi())
                 .extracting(OfertaAnalizada::encaje)
                 .containsExactly(91, 70, 58);
-    }
-
-    @Test
-    @DisplayName("consulta las pendientes con el umbral del perfil")
-    void usaElUmbralDelPerfil() {
-        repositorio.pendientes = List.of();
-
-        useCase.ejecutar(perfil());
-
-        assertThat(repositorio.umbralPedido).isEqualTo(55);
     }
 
     // ------------------------------------------------------------------
@@ -110,14 +132,32 @@ class GenerarResumenDiarioUseCaseTest {
                 new Preferencias(List.of(), 24000, "B1", List.of(), 3, 55));
     }
 
-    private OfertaAnalizada analizada(String huella, int encaje) {
-        Oferta oferta = new Oferta("adzuna", "id-" + huella, "Desarrollador Java Junior",
-                "Coremain", "Santiago", Modalidad.HIBRIDO, 21000, 25000,
-                "descripcion", "https://ejemplo", Idioma.ES,
-                AHORA, AHORA, huella);
-        Analisis analisis = new Analisis(encaje, java.util.Set.of("Java"),
-                java.util.Set.of("Java"), java.util.Set.of(),
-                Seniority.JUNIOR, 1, List.of(), null);
+    /** Encaje por encima del umbral: seccion "para ti". */
+    private OfertaAnalizada deTuStack(String huella, int encaje) {
+        return analizada(huella, "Desarrollador Java Junior", encaje,
+                Seniority.JUNIOR, 1, null);
+    }
+
+    /** Junior de desarrollo con encaje bajo: seccion "podrian interesarte". */
+    private OfertaAnalizada juniorDeOtroStack(String huella) {
+        return analizada(huella, "Desarrollador PHP Junior", 21,
+                Seniority.JUNIOR, 1, "PHP");
+    }
+
+    /** Ni una cosa ni la otra. */
+    private OfertaAnalizada senior(String huella) {
+        return analizada(huella, "Senior Java Software Engineer", 0,
+                Seniority.SENIOR, 5, null);
+    }
+
+    private OfertaAnalizada analizada(String huella, String titulo, int encaje,
+                                      Seniority senal, Integer anos, String falta) {
+        Oferta oferta = new Oferta("adzuna", "id-" + huella, titulo,
+                "Coremain", "Santiago", Modalidad.HIBRIDO, null, null,
+                "descripcion", "https://ejemplo", Idioma.ES, AHORA, AHORA, huella);
+        Analisis analisis = new Analisis(encaje, Set.of(), Set.of(),
+                falta == null ? Set.of() : Set.of(falta),
+                senal, anos, List.of(), null);
         return OfertaAnalizada.de(oferta, analisis);
     }
 
@@ -126,16 +166,14 @@ class GenerarResumenDiarioUseCaseTest {
         List<OfertaAnalizada> pendientes = List.of();
         List<String> marcadas = new ArrayList<>();
         Instant cuando;
-        Integer umbralPedido;
 
         @Override
-        public List<OfertaAnalizada> pendientesDeNotificar(int umbralEncaje) {
-            this.umbralPedido = umbralEncaje;
+        public List<OfertaAnalizada> pendientes() {
             return pendientes;
         }
 
         @Override
-        public void marcarNotificadas(List<String> huellas, Instant cuando) {
+        public void marcarProcesadas(List<String> huellas, Instant cuando) {
             this.marcadas.addAll(huellas);
             this.cuando = cuando;
         }

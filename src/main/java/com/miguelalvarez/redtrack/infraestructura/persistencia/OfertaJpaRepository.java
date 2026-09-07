@@ -23,12 +23,11 @@ public interface OfertaJpaRepository extends JpaRepository<OfertaEntity, Long> {
     List<OfertaEntity> findByEmpresaNormalizadaAndUbicacionNormalizada(
             String empresaNormalizada, String ubicacionNormalizada);
 
-    /** Ofertas que superan el umbral y aun no se han enviado. */
-    List<OfertaEntity> findByNotificadaEnIsNullAndEncajeGreaterThanEqualOrderByEncajeDesc(
-            int umbral);
+    /** Ofertas que aun no se han evaluado en ningun resumen. */
+    List<OfertaEntity> findByProcesadaEnIsNullOrderByEncajeDesc();
 
     @Modifying
-    @Query("update OfertaEntity o set o.notificadaEn = :cuando where o.huella in :huellas")
-    int marcarNotificadas(@Param("huellas") List<String> huellas,
-                          @Param("cuando") Instant cuando);
+    @Query("update OfertaEntity o set o.procesadaEn = :cuando where o.huella in :huellas")
+    int marcarProcesadas(@Param("huellas") List<String> huellas,
+                         @Param("cuando") Instant cuando);
 }

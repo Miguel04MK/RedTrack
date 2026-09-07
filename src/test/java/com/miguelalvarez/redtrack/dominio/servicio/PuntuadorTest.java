@@ -24,8 +24,9 @@ class PuntuadorTest {
 
     private final Normalizador normalizador = new Normalizador();
     private final ExtractorSenales extractor = new ExtractorSenales();
+    private final Accesibilidad accesibilidad = new Accesibilidad();
     private final Puntuador puntuador =
-            new Puntuador(new DetectorTecnologias(), extractor, normalizador);
+            new Puntuador(new DetectorTecnologias(), extractor, normalizador, accesibilidad);
 
     @Nested
     @DisplayName("la seniority multiplica, no suma")
@@ -165,7 +166,7 @@ class PuntuadorTest {
             Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
                     28000, 32000, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
 
-            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+            assertThat(accesibilidad.porSalario(o, perfil())).isEqualTo(1.00);
         }
 
         @Test
@@ -174,7 +175,7 @@ class PuntuadorTest {
             Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
                     null, null, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
 
-            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+            assertThat(accesibilidad.porSalario(o, perfil())).isEqualTo(1.00);
         }
 
         @Test
@@ -186,7 +187,7 @@ class PuntuadorTest {
             // Suma lo maximo (gusta)...
             assertThat(puntuador.puntosSalario(alta, perfil())).isEqualTo(15);
             // ...y a la vez hunde la accesibilidad (no puedo optar).
-            assertThat(puntuador.factorSalario(alta, perfil())).isLessThan(0.5);
+            assertThat(accesibilidad.porSalario(alta, perfil())).isLessThan(0.5);
         }
     }
 

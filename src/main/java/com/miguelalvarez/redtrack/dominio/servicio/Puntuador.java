@@ -67,12 +67,14 @@ public final class Puntuador {
     private final DetectorTecnologias detector;
     private final ExtractorSenales extractor;
     private final Normalizador normalizador;
+    private final Accesibilidad accesibilidad;
 
     public Puntuador(DetectorTecnologias detector, ExtractorSenales extractor,
-                     Normalizador normalizador) {
+                     Normalizador normalizador, Accesibilidad accesibilidad) {
         this.detector = detector;
         this.extractor = extractor;
         this.normalizador = normalizador;
+        this.accesibilidad = accesibilidad;
     }
 
     /** Analiza la oferta contra el perfil. El resumen de IA se anade despues, si lo hay. */
@@ -98,7 +100,7 @@ public final class Puntuador {
 
         int encaje = descartadaPorTitulo(oferta, perfil)
                 ? 0
-                : (int) Math.round(bruto * accesibilidad(senal, anos, oferta, perfil));
+                : (int) Math.round(bruto * accesibilidad.de(senal, anos, oferta, perfil));
 
         return new Analisis(
                 acotar(encaje),
@@ -145,78 +147,7 @@ public final class Puntuador {
         return (int) Math.round(MAX_TECNOLOGIAS * (numerador / denominador));
     }
 
-    /**
-     * Cuanta opcion real hay de entrar en esta oferta, entre 0 y 1.
-     *
-     * <p>Producto de tres evidencias independientes: la etiqueta de seniority,
-     * los anos pedidos y la banda salarial. Independientes porque dicen cosas
-     * distintas y a veces se contradicen: "mid-level" con 2 anos es una puerta
-     * entornada, "mid-level" con 5 es una puerta cerrada, y la etiqueta es la
-     * misma.
-     */
-    double accesibilidad(Seniority senal, Integer anos, Oferta oferta, Perfil perfil) {
-        return senal.factor() * factorAnos(anos) * factorSalario(oferta, perfil);
-    }
-
-    /**
-     * El salario como evidencia de seniority.
-     *
-     * <p>Un sueldo muy por encima del objetivo no es una buena noticia para un
-     * junior: es la prueba de que la oferta no es para el. Es un dato de
-     * seniority disfrazado de dato de compensacion.
-     *
-     * <p>El caso que motivo esto: Minsait publico "Full Stack Java-React" con
-     * banda 60.000-90.000 y sin la palabra senior en el titulo, y "Senior
-     * Full-Stack Engineer" con la banda IDENTICA. Mismo puesto, distinto
-     * titular. Sin esta senal, la primera era la unica oferta que superaba el
-     * umbral: el resumen diario tenia un 100% de falsos positivos.
-     *
-     * <p>Es un proxy parcial: solo 3 de cada 15 ofertas publican banda. No
-     * penaliza el silencio, que es lo mayoritario.
-     */
-    double factorSalario(Oferta oferta, Perfil perfil) {
-        Integer suelo = oferta.salarioMin() != null ? oferta.salarioMin() : oferta.salarioMax();
-        int objetivo = perfil.preferencias().salarioObjetivo();
-        if (suelo == null || objetivo <= 0) {
-            return 1.00;
-        }
-        double veces = (double) suelo / objetivo;
-        if (veces <= 1.6) {
-            return 1.00;
-        }
-        if (veces <= 2.0) {
-            return 0.70;
-        }
-        if (veces <= 2.5) {
-            return 0.40;
-        }
-        return 0.20;
-    }
-
-    /**
-     * Los anos son el dato duro. Caen rapido a partir de tres porque a partir
-     * de ahi la oferta deja de ser alcanzable, no solo menos comoda.
-     *
-     * <p>Cuando la oferta no los dice se aplica 0.90: no se penaliza el
-     * silencio, pero tampoco se premia. Hoy es el caso mayoritario, porque
-     * Adzuna recorta la descripcion a 500 caracteres.
-     */
-    double factorAnos(Integer anos) {
-        if (anos == null) {
-            return 0.90;
-        }
-        if (anos <= 1) {
-            return 1.00;
-        }
-        return switch (anos) {
-            case 2 -> 0.92;
-            case 3 -> 0.70;
-            case 4 -> 0.40;
-            default -> 0.20;
-        };
-    }
-
-    /** 15 pts. */
+    /** 20 pts. */
     int puntosUbicacion(Oferta oferta, Perfil perfil) {
         if (oferta.modalidad() == Modalidad.REMOTO) {
             return MAX_UBICACION;
@@ -283,7 +214,7 @@ public final class Puntuador {
 
         // Se informa en vez de esconderlo: la penalizacion ya esta aplicada en
         // la accesibilidad, pero conviene poder ver POR QUE bajo la nota.
-        if (factorSalario(oferta, perfil) < 1.0) {
+        if (accesibilidad.porSalario(oferta, perfil) < 1.0) {
             banderas.add("banda salarial de puesto no junior: "
                     + oferta.salarioMin() + "-" + oferta.salarioMax() + " EUR");
         }
