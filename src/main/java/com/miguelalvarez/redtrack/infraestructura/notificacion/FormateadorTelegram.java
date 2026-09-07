@@ -43,6 +43,10 @@ public class FormateadorTelegram {
     private static final int MARGEN = 60;
 
     public String formatear(ResumenDiario resumen) {
+        if (resumen.estaVacio()) {
+            return sinNadaHoy(resumen);
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("*RedTrack* - ").append(cabecera(resumen)).append("\n");
 
@@ -51,6 +55,39 @@ public class FormateadorTelegram {
             escribirSeccion(sb, "PODRIAN INTERESARTE",
                     "_Junior de desarrollo, aunque no sea tu stack._",
                     resumen.podrianInteresarte());
+        }
+        return sb.toString();
+    }
+
+    /**
+     * El mensaje de los dias en blanco.
+     *
+     * <p>Se manda igual, y esto es deliberado: un resumen que no llega es
+     * indistinguible de un sistema caido, y a los tres dias de silencio dejarias
+     * de fiarte de la herramienta. Se ensena lo mas alto que hubo para que se
+     * vea que el sistema miro y decidio, no que se murio.
+     *
+     * <p>No baja el umbral: solo cambia lo que se cuenta.
+     */
+    private String sinNadaHoy(ResumenDiario resumen) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("*RedTrack* - hoy nada supera el umbral.\n");
+        sb.append("_Revisadas ").append(resumen.descartadas().size())
+                .append(resumen.descartadas().size() == 1
+                        ? " oferta nueva._\n" : " ofertas nuevas._\n");
+
+        if (!resumen.mejoresDescartadas().isEmpty()) {
+            sb.append("\nLo mas alto que hubo:\n");
+            for (OfertaAnalizada analizada : resumen.mejoresDescartadas()) {
+                sb.append("· [").append(analizada.encaje()).append("%] ")
+                        .append(analizada.oferta().titulo())
+                        .append(" - ").append(analizada.oferta().empresa());
+                if (!analizada.analisis().banderasRojas().isEmpty()) {
+                    sb.append(" (").append(analizada.analisis().banderasRojas().getFirst())
+                            .append(")");
+                }
+                sb.append("\n");
+            }
         }
         return sb.toString();
     }

@@ -19,12 +19,17 @@ import java.util.stream.Stream;
 public record ResumenDiario(
         LocalDate fecha,
         List<OfertaAnalizada> paraTi,
-        List<OfertaAnalizada> podrianInteresarte
+        List<OfertaAnalizada> podrianInteresarte,
+        List<OfertaAnalizada> descartadas
 ) {
+
+    /** Cuantas descartadas se ensenan cuando no hay nada en las dos secciones. */
+    public static final int MEJORES_DESCARTADAS = 3;
 
     public ResumenDiario {
         paraTi = ordenadas(paraTi);
         podrianInteresarte = ordenadas(podrianInteresarte);
+        descartadas = ordenadas(descartadas);
     }
 
     private static List<OfertaAnalizada> ordenadas(List<OfertaAnalizada> ofertas) {
@@ -40,12 +45,25 @@ public record ResumenDiario(
         return Stream.concat(paraTi.stream(), podrianInteresarte.stream()).toList();
     }
 
-    /** true si no hay nada que enviar en ninguna de las dos secciones. */
+    /** true si ninguna oferta ha entrado en las dos secciones. */
     public boolean estaVacio() {
         return paraTi.isEmpty() && podrianInteresarte.isEmpty();
     }
 
+    /** true si ni siquiera se evaluo nada: no hubo ofertas nuevas en todo el dia. */
+    public boolean nadaQueContar() {
+        return estaVacio() && descartadas.isEmpty();
+    }
+
     public int cuantas() {
         return paraTi.size() + podrianInteresarte.size();
+    }
+
+    /**
+     * Lo mejor de lo que no entro, para poder decir algo cuando el resumen sale
+     * vacio. Un mensaje que no llega es indistinguible de un sistema roto.
+     */
+    public List<OfertaAnalizada> mejoresDescartadas() {
+        return descartadas.stream().limit(MEJORES_DESCARTADAS).toList();
     }
 }

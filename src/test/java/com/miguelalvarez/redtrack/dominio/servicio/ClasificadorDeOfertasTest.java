@@ -72,13 +72,37 @@ class ClasificadorDeOfertasTest {
     class Reparto {
 
         @Test
-        @DisplayName("si supera el umbral va a PARA_TI, sea cual sea el resto")
+        @DisplayName("si supera el umbral y es de desarrollo, va a PARA_TI")
         void superarElUmbralMandaAParaTi() {
             assertThat(clasificador.clasificar(
                     oferta("Desarrollador Java Junior", null, null),
                     analisis(87, Seniority.JUNIOR, 1),
                     perfil()))
                     .isEqualTo(Seccion.PARA_TI);
+        }
+
+        @Test
+        @DisplayName("REGRESION: superar el umbral NO basta si no es un puesto de desarrollo")
+        void elUmbralNoAbrePorSiSoloLaPrimeraSeccion() {
+            // Caso real de Remotive: "SaaS Product Support Jedi" saco 61 y entro
+            // en "para ti" porque menciona JavaScript, es remota y pide 2 anos.
+            // Es soporte a cliente. Citar una tecnologia que tienes no convierte
+            // una oferta en una oferta de programador.
+            assertThat(clasificador.clasificar(
+                    oferta("SaaS Product Support Jedi", null, null),
+                    analisis(61, Seniority.NO_DICE, 2),
+                    perfil()))
+                    .isEqualTo(Seccion.NINGUNA);
+        }
+
+        @Test
+        @DisplayName("y tampoco entra por la segunda puerta")
+        void tampocoEntraPorLaSegunda() {
+            assertThat(clasificador.clasificar(
+                    oferta("Remote Office Assistant", null, null),
+                    analisis(32, Seniority.JUNIOR, 1),
+                    perfil()))
+                    .isEqualTo(Seccion.NINGUNA);
         }
 
         @Test

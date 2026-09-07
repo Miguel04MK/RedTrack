@@ -55,26 +55,34 @@ public final class ClasificadorDeOfertas {
     }
 
     public Seccion clasificar(Oferta oferta, Analisis analisis, Perfil perfil) {
+        // Precondicion de LAS DOS secciones, no solo de la segunda.
+        //
+        // Lo destapo un dato real: "SaaS Product Support Jedi" saco 61 y entro
+        // en "para ti" porque menciona JavaScript, es remota y pide 2 anos. Es
+        // un puesto de soporte a cliente. Que una oferta cite una tecnologia que
+        // tienes no la convierte en una oferta de programador.
+        if (!pareceDesarrollo(oferta)) {
+            return Seccion.NINGUNA;
+        }
         if (analisis.superaUmbral(perfil.preferencias().umbralEncaje())) {
             return Seccion.PARA_TI;
         }
-        if (esJuniorDeDesarrollo(oferta, analisis, perfil)) {
+        if (esAlcanzable(analisis, oferta, perfil)) {
             return Seccion.PODRIA_INTERESARTE;
         }
         return Seccion.NINGUNA;
     }
 
     /**
-     * Un puesto de desarrollo sin ninguna evidencia de no ser junior.
+     * Sin ninguna evidencia de no ser junior.
      *
      * <p>El encaje no entra en la cuenta: si entrara, esta seccion seria otra
      * vez la primera con el liston mas bajo, y lo que se busca es justo lo
      * contrario.
      */
-    boolean esJuniorDeDesarrollo(Oferta oferta, Analisis analisis, Perfil perfil) {
-        return pareceDesarrollo(oferta)
-                && accesibilidad.sinEvidenciaDeNoSerJunior(
-                        analisis.senal(), analisis.anosRequeridos(), oferta, perfil);
+    boolean esAlcanzable(Analisis analisis, Oferta oferta, Perfil perfil) {
+        return accesibilidad.sinEvidenciaDeNoSerJunior(
+                analisis.senal(), analisis.anosRequeridos(), oferta, perfil);
     }
 
     /** Expuesto para los tests: es la parte que filtra el ruido de la busqueda. */

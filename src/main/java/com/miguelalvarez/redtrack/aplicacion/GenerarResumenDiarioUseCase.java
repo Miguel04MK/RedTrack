@@ -52,32 +52,35 @@ public class GenerarResumenDiarioUseCase {
 
         List<OfertaAnalizada> paraTi = new ArrayList<>();
         List<OfertaAnalizada> podrianInteresarte = new ArrayList<>();
+        List<OfertaAnalizada> descartadas = new ArrayList<>();
 
         for (OfertaAnalizada analizada : pendientes) {
             Seccion seccion = clasificador.clasificar(
                     analizada.oferta(), analizada.analisis(), perfil);
-            if (seccion == Seccion.PARA_TI) {
-                paraTi.add(analizada);
-            } else if (seccion == Seccion.PODRIA_INTERESARTE) {
-                podrianInteresarte.add(analizada);
+            switch (seccion) {
+                case PARA_TI -> paraTi.add(analizada);
+                case PODRIA_INTERESARTE -> podrianInteresarte.add(analizada);
+                case NINGUNA -> descartadas.add(analizada);
             }
         }
 
         ResumenDiario resumen = new ResumenDiario(
-                LocalDate.now(reloj), paraTi, podrianInteresarte);
+                LocalDate.now(reloj), paraTi, podrianInteresarte, descartadas);
 
-        if (resumen.estaVacio()) {
-            log.info("Nada que enviar: {} ofertas evaluadas, ninguna entra en el resumen",
-                    pendientes.size());
-            marcar(pendientes);
+        // Solo se calla cuando no hubo NI UNA oferta nueva que evaluar. Si hubo
+        // ofertas y ninguna entro, se dice: un mensaje que no llega es
+        // indistinguible de un sistema roto.
+        if (resumen.nadaQueContar()) {
+            log.info("Sin ofertas nuevas que evaluar: no se envia nada");
             return resumen;
         }
 
         if (notificador.enviar(resumen)) {
             marcar(pendientes);
-            log.info("Resumen enviado por {}: {} para ti, {} podrian interesarte",
+            log.info("Resumen enviado por {}: {} para ti, {} podrian interesarte, "
+                            + "{} descartadas",
                     notificador.nombre(), resumen.paraTi().size(),
-                    resumen.podrianInteresarte().size());
+                    resumen.podrianInteresarte().size(), resumen.descartadas().size());
         } else {
             // No se marca nada: se reintenta entero en la siguiente ejecucion.
             log.warn("Fallo el envio por {}: las {} ofertas quedan pendientes",
