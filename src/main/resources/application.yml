@@ -57,6 +57,12 @@ redtrack:
   # Cada manana laborable a las 8:00, hora de Madrid.
   cron: "0 0 8 * * MON-FRI"
 
+  # Protege POST /api/recolectar y POST /api/resumen, que gastan cuota de
+  # Adzuna y hacen que el bot escriba. Si esta vacio, esos dos endpoints
+  # devuelven 503 en vez de quedar abiertos.
+  api:
+    token: ${REDTRACK_API_TOKEN:}
+
   perfil:
     ruta: classpath:perfil.yaml
 

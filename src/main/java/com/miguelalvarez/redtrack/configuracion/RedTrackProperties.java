@@ -18,8 +18,19 @@ public record RedTrackProperties(
         Adzuna adzuna,
         Remotive remotive,
         Telegram telegram,
-        Ia ia
+        Ia ia,
+        Api api
 ) {
+
+    /**
+     * @param token protege POST /api/recolectar y POST /api/resumen. Si esta
+     *              vacio, esos endpoints se deshabilitan con un 503 en vez de
+     *              quedar abiertos: un despliegue al que se le olvida la
+     *              variable tiene que romperse de forma evidente, no quedarse
+     *              en barra libre.
+     */
+    public record Api(String token) {
+    }
 
     /**
      * Que se busca.

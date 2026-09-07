@@ -1,0 +1,27 @@
+# ============================================================
+#  Perfil "una pasada": arranca, recolecta, envia y termina.
+#
+#  Pensado para que lo dispare algo de fuera:
+#    - un workflow programado de GitHub Actions
+#    - un cron del sistema en el servidor
+#
+#  Asi no hace falta tener el servicio encendido las 24 horas para
+#  un trabajo que dura tres minutos al dia.
+#
+#  Uso:
+#     java -jar redtrack.jar --spring.profiles.active=una-pasada
+# ============================================================
+
+spring:
+  main:
+    # Sin servidor web: no hay nadie esperando peticiones.
+    web-application-type: none
+    banner-mode: off
+
+logging:
+  level:
+    com.miguelalvarez.redtrack: INFO
+    # En una ejecucion puntual interesa el resultado, no el arranque.
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.flywaydb: INFO

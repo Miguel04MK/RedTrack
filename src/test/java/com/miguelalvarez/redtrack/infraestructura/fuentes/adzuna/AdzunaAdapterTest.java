@@ -103,7 +103,7 @@ class AdzunaAdapterTest {
         AdzunaAdapter sinClaves = new AdzunaAdapter(
                 new RedTrackProperties(null,
                         new RedTrackProperties.Adzuna(true, "http://localhost", "es", "", ""),
-                        null, null, null),
+                        null, null, null, null),
                 RestClient.builder(),
                 new ExtractorSenales());
 
@@ -114,6 +114,6 @@ class AdzunaAdapterTest {
         return new RedTrackProperties(
                 null,
                 new RedTrackProperties.Adzuna(true, url, "es", "app-id", "app-key"),
-                null, null, null);
+                null, null, null, null);
     }
 }

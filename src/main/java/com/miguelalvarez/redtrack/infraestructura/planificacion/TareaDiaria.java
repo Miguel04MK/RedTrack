@@ -2,19 +2,19 @@ package com.miguelalvarez.redtrack.infraestructura.planificacion;
 
 import com.miguelalvarez.redtrack.aplicacion.GenerarResumenDiarioUseCase;
 import com.miguelalvarez.redtrack.aplicacion.RecolectarOfertasUseCase;
-import com.miguelalvarez.redtrack.configuracion.RedTrackProperties;
-import com.miguelalvarez.redtrack.dominio.modelo.CriterioBusqueda;
 import com.miguelalvarez.redtrack.dominio.modelo.Perfil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * El disparador de todo: cada manana laborable a las 8:00.
+ * El disparador cuando el servicio esta encendido: cada manana laborable a las
+ * 8:00.
+ *
+ * <p>Hace exactamente lo mismo que {@link PasadaUnica}; lo unico que cambia es
+ * quien lo llama. Si el servicio no va a estar encendido de forma permanente,
+ * usa el perfil {@code una-pasada} y un cron de fuera.
  */
 @Component
 public class TareaDiaria {
@@ -23,50 +23,26 @@ public class TareaDiaria {
 
     private final RecolectarOfertasUseCase recolectar;
     private final GenerarResumenDiarioUseCase resumir;
-    private final RedTrackProperties propiedades;
+    private final CriteriosDeBusqueda criterios;
     private final Perfil perfil;
 
     public TareaDiaria(RecolectarOfertasUseCase recolectar,
                        GenerarResumenDiarioUseCase resumir,
-                       RedTrackProperties propiedades,
+                       CriteriosDeBusqueda criterios,
                        Perfil perfil) {
         this.recolectar = recolectar;
         this.resumir = resumir;
-        this.propiedades = propiedades;
+        this.criterios = criterios;
         this.perfil = perfil;
     }
 
     @Scheduled(cron = "${redtrack.cron:0 0 8 * * MON-FRI}", zone = "Europe/Madrid")
     public void ejecutar() {
         log.info("Arranca la recoleccion diaria");
-        RecolectarOfertasUseCase.Resultado resultado = recolectar.ejecutar(criterios(), perfil);
+        RecolectarOfertasUseCase.Resultado resultado = recolectar.ejecutar(
+                criterios.todos(), perfil);
         log.info("Recolectadas {} ofertas nuevas de {} vistas",
                 resultado.nuevas(), resultado.vistas());
         resumir.ejecutar(perfil);
-    }
-
-    /**
-     * Producto cartesiano de terminos x ubicaciones.
-     *
-     * <p>Incluye los exploratorios: alimentan la seccion "podrian interesarte".
-     * Van en la misma recoleccion porque una oferta no sabe a que seccion
-     * pertenece: eso lo decide el clasificador despues, sobre la oferta ya
-     * normalizada y puntuada.
-     */
-    public List<CriterioBusqueda> criterios() {
-        RedTrackProperties.Busquedas b = propiedades.busquedas();
-        List<String> terminos = new ArrayList<>(b.terminos());
-        if (b.terminosExploratorios() != null) {
-            terminos.addAll(b.terminosExploratorios());
-        }
-
-        List<CriterioBusqueda> criterios = new ArrayList<>();
-        for (String termino : terminos) {
-            for (String ubicacion : b.ubicaciones()) {
-                criterios.add(new CriterioBusqueda(
-                        termino, ubicacion, b.maxDiasAntiguedad(), b.maxResultadosPorFuente()));
-            }
-        }
-        return criterios;
     }
 }

@@ -4,7 +4,6 @@ import com.miguelalvarez.redtrack.configuracion.RedTrackProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * RedTrack: radar de ofertas de empleo.
@@ -14,7 +13,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * solo las nuevas que superan el umbral.
  */
 @SpringBootApplication
-@EnableScheduling
 @EnableConfigurationProperties(RedTrackProperties.class)
 public class RedTrackApplication {
 
