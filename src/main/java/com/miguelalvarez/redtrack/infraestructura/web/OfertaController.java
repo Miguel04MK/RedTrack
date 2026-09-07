@@ -1,9 +1,11 @@
 package com.miguelalvarez.redtrack.infraestructura.web;
 
+import com.miguelalvarez.redtrack.aplicacion.GenerarResumenDiarioUseCase;
 import com.miguelalvarez.redtrack.aplicacion.RecolectarOfertasUseCase;
 import com.miguelalvarez.redtrack.dominio.modelo.Modalidad;
 import com.miguelalvarez.redtrack.dominio.modelo.OfertaAnalizada;
 import com.miguelalvarez.redtrack.dominio.modelo.Perfil;
+import com.miguelalvarez.redtrack.dominio.modelo.ResumenDiario;
 import com.miguelalvarez.redtrack.infraestructura.planificacion.TareaDiaria;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,13 +36,16 @@ import java.util.List;
 public class OfertaController {
 
     private final RecolectarOfertasUseCase recolectar;
+    private final GenerarResumenDiarioUseCase generarResumen;
     private final TareaDiaria tareaDiaria;
     private final Perfil perfil;
 
     public OfertaController(RecolectarOfertasUseCase recolectar,
+                            GenerarResumenDiarioUseCase generarResumen,
                             TareaDiaria tareaDiaria,
                             Perfil perfil) {
         this.recolectar = recolectar;
+        this.generarResumen = generarResumen;
         this.tareaDiaria = tareaDiaria;
         this.perfil = perfil;
     }
@@ -84,6 +89,18 @@ public class OfertaController {
     public RecolectarOfertasUseCase.Resultado recolectarAhora() {
         // TODO(fase-4): proteger este endpoint antes de exponerlo en AWS.
         return recolectar.ejecutar(tareaDiaria.criterios(), perfil);
+    }
+
+    /**
+     * Genera y ENVIA el resumen ahora, sin esperar al cron de las 8:00.
+     *
+     * <p>Es lo que se ensena en directo, y lo que evita tener que esperar a
+     * manana para comprobar un cambio en la clasificacion.
+     */
+    @PostMapping("/resumen")
+    @Operation(summary = "Genera y envia el resumen diario ahora mismo")
+    public ResumenDiario resumenAhora() {
+        return generarResumen.ejecutar(perfil);
     }
 
     public record AnalizarPeticion(String texto) {

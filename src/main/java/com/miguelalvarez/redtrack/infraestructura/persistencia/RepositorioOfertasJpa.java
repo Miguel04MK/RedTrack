@@ -90,9 +90,8 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
     }
 
     @Override
-    public List<OfertaAnalizada> pendientesDeNotificar(int umbralEncaje) {
-        return ofertas
-                .findByNotificadaEnIsNullAndEncajeGreaterThanEqualOrderByEncajeDesc(umbralEncaje)
+    public List<OfertaAnalizada> pendientes() {
+        return ofertas.findByProcesadaEnIsNullOrderByEncajeDesc()
                 .stream()
                 .map(e -> mapeador.aDominioAnalizada(e, fuentesDe(e.getId())))
                 .toList();
@@ -100,13 +99,13 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
 
     @Override
     @Transactional
-    public void marcarNotificadas(List<String> huellas, Instant cuando) {
+    public void marcarProcesadas(List<String> huellas, Instant cuando) {
         if (huellas == null || huellas.isEmpty()) {
             return;
         }
-        int marcadas = ofertas.marcarNotificadas(huellas, cuando);
+        int marcadas = ofertas.marcarProcesadas(huellas, cuando);
         if (marcadas != huellas.size()) {
-            log.warn("Se pidio marcar {} ofertas como notificadas y se marcaron {}",
+            log.warn("Se pidio marcar {} ofertas como procesadas y se marcaron {}",
                     huellas.size(), marcadas);
         }
     }

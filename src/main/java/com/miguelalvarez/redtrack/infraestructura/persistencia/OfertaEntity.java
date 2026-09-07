@@ -114,9 +114,9 @@ public class OfertaEntity {
     @Column(name = "resumen_ia", columnDefinition = "text")
     private String resumenIa;
 
-    /** null mientras no se haya enviado. Es lo que evita repetir ofertas. */
-    @Column(name = "notificada_en")
-    private Instant notificadaEn;
+    /** null mientras no se haya evaluado. Es lo que evita repetir ofertas. */
+    @Column(name = "procesada_en")
+    private Instant procesadaEn;
 
     public OfertaEntity() {
         // requerido por JPA, y usado por el adaptador al construir una fila nueva
@@ -324,11 +324,11 @@ public class OfertaEntity {
         this.resumenIa = resumenIa;
     }
 
-    public Instant getNotificadaEn() {
-        return notificadaEn;
+    public Instant getProcesadaEn() {
+        return procesadaEn;
     }
 
-    public void setNotificadaEn(Instant notificadaEn) {
-        this.notificadaEn = notificadaEn;
+    public void setProcesadaEn(Instant procesadaEn) {
+        this.procesadaEn = procesadaEn;
     }
 }

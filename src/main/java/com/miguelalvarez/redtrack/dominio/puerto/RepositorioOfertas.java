@@ -36,14 +36,21 @@ public interface RepositorioOfertas {
     /** Candidatas para la comparacion difusa: misma empresa y ubicacion normalizadas. */
     List<Oferta> candidatasParaCotejar(String empresaNormalizada, String ubicacionNormalizada);
 
-    /** Ofertas que superan el umbral y aun no se han notificado. */
-    List<OfertaAnalizada> pendientesDeNotificar(int umbralEncaje);
+    /**
+     * Ofertas aun sin evaluar en ningun resumen.
+     *
+     * <p>No filtra por encaje: quien decide que entra y que no es el dominio,
+     * y la seccion "podrian interesarte" acepta ofertas con encaje bajo a
+     * proposito. Un filtro por umbral aqui la vaciaria.
+     */
+    List<OfertaAnalizada> pendientes();
 
     /**
-     * Marca como notificadas para que no vuelvan a salir en el resumen de manana.
+     * Marca como procesadas para que no vuelvan a evaluarse manana.
      *
-     * <p>Solo se llama si el envio se confirmo: si el notificador falla, las
-     * ofertas siguen pendientes y se reintentan.
+     * <p>Se marcan todas las evaluadas, entren o no en el resumen: el veredicto
+     * es determinista, asi que lo que no entro hoy no entrara manana. Solo se
+     * llama si el envio se confirmo.
      */
-    void marcarNotificadas(List<String> huellas, Instant cuando);
+    void marcarProcesadas(List<String> huellas, Instant cuando);
 }
