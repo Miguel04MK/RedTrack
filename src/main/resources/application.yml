@@ -3,7 +3,10 @@ spring:
     name: redtrack
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/redtrack}
+    # 5433 es el puerto que publica docker-compose en el host: el 5432 suele
+    # estar ocupado por un PostgreSQL instalado en el sistema. Dentro de Docker
+    # esto lo sobreescribe SPRING_DATASOURCE_URL apuntando a postgres:5432.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/redtrack}
     username: ${POSTGRES_USER:redtrack}
     password: ${POSTGRES_PASSWORD:redtrack}
 
@@ -58,10 +61,27 @@ redtrack:
     ruta: classpath:perfil.yaml
 
   busquedas:
+    # Tu stack. Alimentan la seccion "para ti".
     terminos:
       - "java spring"
       - "desarrollador backend junior"
       - "java junior"
+
+    # Puestos junior de desarrollo de cualquier stack, para la seccion
+    # "podrian interesarte".
+    #
+    # Tienen que ser ESPECIFICOS: buscar "junior" a secas en Galicia devuelve
+    # "Junior Territory Manager", "Comercial Tecnico Junior" y "Practicas RRHH".
+    # Y no se puede filtrar con category=it-jobs, porque 13 de cada 17 ofertas
+    # de informatica reales vienen con categoria "unknown".
+    terminos-exploratorios:
+      - "desarrollador junior"
+      - "programador junior"
+      - "junior developer"
+      - "junior software"
+      - "becario desarrollo"
+      - "practicas programacion"
+
     ubicaciones:
       - "galicia"
       - "pontevedra"
@@ -77,11 +97,12 @@ redtrack:
     app-key: ${ADZUNA_APP_KEY:}
 
   remotive:
-    # TODO(fase-3): activar cuando el adaptador este implementado y verificado
-    #               con un curl a la API real.
-    activa: false
+    # Verificada con curl: devuelve la descripcion COMPLETA (2.600-28.000
+    # caracteres), que es justo lo que Adzuna trunca a 500.
+    activa: true
     url: https://remotive.com
     categoria: software-dev
+    dolares-por-euro: 1.08
 
   telegram:
     activo: true

@@ -45,11 +45,23 @@ public class TareaDiaria {
         resumir.ejecutar(perfil);
     }
 
-    /** Producto cartesiano de terminos x ubicaciones configurados. */
+    /**
+     * Producto cartesiano de terminos x ubicaciones.
+     *
+     * <p>Incluye los exploratorios: alimentan la seccion "podrian interesarte".
+     * Van en la misma recoleccion porque una oferta no sabe a que seccion
+     * pertenece: eso lo decide el clasificador despues, sobre la oferta ya
+     * normalizada y puntuada.
+     */
     public List<CriterioBusqueda> criterios() {
         RedTrackProperties.Busquedas b = propiedades.busquedas();
+        List<String> terminos = new ArrayList<>(b.terminos());
+        if (b.terminosExploratorios() != null) {
+            terminos.addAll(b.terminosExploratorios());
+        }
+
         List<CriterioBusqueda> criterios = new ArrayList<>();
-        for (String termino : b.terminos()) {
+        for (String termino : terminos) {
             for (String ubicacion : b.ubicaciones()) {
                 criterios.add(new CriterioBusqueda(
                         termino, ubicacion, b.maxDiasAntiguedad(), b.maxResultadosPorFuente()));

@@ -1,0 +1,71 @@
+{
+  "0-legal-notice": "Respuesta real de https://remotive.com/api/remote-jobs?category=software-dev, con las descripciones recortadas para que el fichero sea manejable. Se conservan el HTML, los formatos de salario y las zonas tal y como llegan.",
+  "job-count": 5,
+  "jobs": [
+    {
+      "id": 2001,
+      "url": "https://remotive.com/remote-jobs/software-dev/backend-developer-2001",
+      "title": "Junior Backend Developer",
+      "company_name": "Cobalt Labs",
+      "category": "Software Development",
+      "tags": ["java", "spring boot", "postgresql", "docker"],
+      "job_type": "full_time",
+      "publication_date": "2026-09-05T14:12:33",
+      "candidate_required_location": "Europe",
+      "salary": "$31,2k- $52k",
+      "description": "<div class=\"h2\" style=\"padding: 10px 0px; border-style: none;\"><h2>About the role</h2></div><p>We are looking for a <strong>Junior Backend Developer</strong> to join our team. You will work with Java 21, Spring Boot and PostgreSQL, and deploy with Docker.</p><ul><li>1 year of experience is enough</li><li>We use Go for some internal tooling</li></ul><style>.h2 { color: #333; }</style><p>Benefits &amp; perks included.</p>"
+    },
+    {
+      "id": 2002,
+      "url": "https://remotive.com/remote-jobs/software-dev/senior-devops-2002",
+      "title": "Senior DevOps Engineer",
+      "company_name": "Northwind",
+      "category": "Software Development",
+      "tags": ["kubernetes", "aws", "terraform"],
+      "job_type": "full_time",
+      "publication_date": "2026-09-06T09:00:00",
+      "candidate_required_location": "LATAM, Europe, USA, Canada, APAC",
+      "salary": "$150k - $230k",
+      "description": "<p>We need a Senior DevOps Engineer with at least 6 years of experience in Kubernetes and AWS.</p>"
+    },
+    {
+      "id": 2003,
+      "url": "https://remotive.com/remote-jobs/software-dev/us-only-2003",
+      "title": "Backend Engineer",
+      "company_name": "Stateside Inc",
+      "category": "Software Development",
+      "tags": ["python"],
+      "job_type": "full_time",
+      "publication_date": "2026-09-06T11:30:00",
+      "candidate_required_location": "USA, Canada, USA timezones",
+      "salary": "$120k - $160k",
+      "description": "<p>Backend Engineer, US based only.</p>"
+    },
+    {
+      "id": 2004,
+      "url": "https://remotive.com/remote-jobs/software-dev/copywriter-2004",
+      "title": "Freelance Copywriter",
+      "company_name": "Contentful Words",
+      "category": "Software Development",
+      "tags": ["REST", "excel", "research"],
+      "job_type": "freelance",
+      "publication_date": "2026-09-07T08:00:00",
+      "candidate_required_location": "Worldwide",
+      "salary": "Pay per task",
+      "description": "<p>Write marketing copy for our clients. No coding involved.</p>"
+    },
+    {
+      "id": 2005,
+      "url": "https://remotive.com/remote-jobs/software-dev/qa-hourly-2005",
+      "title": "Junior QA Tester",
+      "company_name": "Bugfree",
+      "category": "Software Development",
+      "tags": ["testing", "selenium"],
+      "job_type": "contract",
+      "publication_date": "2026-09-07T10:45:00",
+      "candidate_required_location": "Worldwide",
+      "salary": "$14/hour",
+      "description": "<p>Manual and automated testing. No experience required.</p>"
+    }
+  ]
+}

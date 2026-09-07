@@ -1,11 +1,14 @@
 package com.miguelalvarez.redtrack.configuracion;
 
+import com.miguelalvarez.redtrack.aplicacion.AnalizarTextoUseCase;
 import com.miguelalvarez.redtrack.aplicacion.GenerarResumenDiarioUseCase;
 import com.miguelalvarez.redtrack.aplicacion.RecolectarOfertasUseCase;
 import com.miguelalvarez.redtrack.dominio.puerto.AnalizadorSemantico;
 import com.miguelalvarez.redtrack.dominio.puerto.FuenteDeOfertas;
 import com.miguelalvarez.redtrack.dominio.puerto.Notificador;
 import com.miguelalvarez.redtrack.dominio.puerto.RepositorioOfertas;
+import com.miguelalvarez.redtrack.dominio.servicio.Accesibilidad;
+import com.miguelalvarez.redtrack.dominio.servicio.ClasificadorDeOfertas;
 import com.miguelalvarez.redtrack.dominio.servicio.Deduplicador;
 import com.miguelalvarez.redtrack.dominio.servicio.DetectorTecnologias;
 import com.miguelalvarez.redtrack.dominio.servicio.ExtractorSenales;
@@ -53,9 +56,19 @@ public class NucleoConfiguracion {
     }
 
     @Bean
+    Accesibilidad accesibilidad() {
+        return new Accesibilidad();
+    }
+
+    @Bean
+    ClasificadorDeOfertas clasificadorDeOfertas(Accesibilidad accesibilidad) {
+        return new ClasificadorDeOfertas(accesibilidad);
+    }
+
+    @Bean
     Puntuador puntuador(DetectorTecnologias detector, ExtractorSenales extractor,
-                        Normalizador normalizador) {
-        return new Puntuador(detector, extractor, normalizador);
+                        Normalizador normalizador, Accesibilidad accesibilidad) {
+        return new Puntuador(detector, extractor, normalizador, accesibilidad);
     }
 
     /**
@@ -74,9 +87,16 @@ public class NucleoConfiguracion {
     }
 
     @Bean
+    AnalizarTextoUseCase analizarTexto(Puntuador puntuador, ExtractorSenales extractor,
+                                       Normalizador normalizador) {
+        return new AnalizarTextoUseCase(puntuador, extractor, normalizador);
+    }
+
+    @Bean
     GenerarResumenDiarioUseCase generarResumenDiario(RepositorioOfertas repositorio,
+                                                     ClasificadorDeOfertas clasificador,
                                                      Notificador notificador,
                                                      Clock reloj) {
-        return new GenerarResumenDiarioUseCase(repositorio, notificador, reloj);
+        return new GenerarResumenDiarioUseCase(repositorio, clasificador, notificador, reloj);
     }
 }

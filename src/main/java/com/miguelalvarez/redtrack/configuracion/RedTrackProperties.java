@@ -21,9 +21,21 @@ public record RedTrackProperties(
         Ia ia
 ) {
 
-    /** Que se busca y con que frecuencia. */
+    /**
+     * Que se busca.
+     *
+     * @param terminos             el stack propio, para la seccion "para ti"
+     * @param terminosExploratorios puestos junior de desarrollo de cualquier
+     *                             stack, para la seccion "podrian interesarte".
+     *                             Tienen que ser especificos: buscar "junior" a
+     *                             secas devuelve Territory Managers y practicas
+     *                             de RRHH, y la categoria de Adzuna no sirve
+     *                             para filtrarlo porque la mayoria de ofertas
+     *                             de informatica vienen sin categoria.
+     */
     public record Busquedas(
             List<String> terminos,
+            List<String> terminosExploratorios,
             List<String> ubicaciones,
             int maxDiasAntiguedad,
             int maxResultadosPorFuente
@@ -39,10 +51,17 @@ public record RedTrackProperties(
     ) {
     }
 
+    /**
+     * @param dolaresPorEuro Remotive publica los salarios en dolares y en texto
+     *                       libre. Una aproximacion basta: la banda ya es
+     *                       orientativa, y no merece la pena una llamada a una
+     *                       API de divisas para esto.
+     */
     public record Remotive(
             boolean activa,
             String url,
-            String categoria
+            String categoria,
+            double dolaresPorEuro
     ) {
     }
 

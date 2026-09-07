@@ -29,7 +29,9 @@ CREATE TABLE oferta (
     capturada_en          TIMESTAMPTZ  NOT NULL,
 
     -- sha256(empresa|titulo|ubicacion) normalizados. Paso 1 de la deduplicacion.
-    huella                CHAR(64)     NOT NULL,
+    -- VARCHAR y no CHAR: CHAR rellena con espacios hasta la longitud fija, y
+    -- eso no se quiere cerca de un hash.
+    huella                VARCHAR(64)  NOT NULL,
 
     -- Claves de cotejo del paso 2: acotan las candidatas antes de aplicar
     -- Jaro-Winkler, para no traerse la tabla entera a memoria.

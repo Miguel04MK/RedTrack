@@ -27,7 +27,7 @@ public interface OfertaMapeador {
     Oferta aDominio(OfertaEntity entidad);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "notificadaEn", ignore = true)
+    @Mapping(target = "procesadaEn", ignore = true)
     void volcarEn(Oferta oferta, @MappingTarget OfertaEntity entidad);
 
     /** Entidad -> par (oferta, analisis) tal y como lo consume el resumen. */

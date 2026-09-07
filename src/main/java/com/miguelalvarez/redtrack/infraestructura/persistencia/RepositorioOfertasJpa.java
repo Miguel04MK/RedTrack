@@ -4,6 +4,8 @@ import com.miguelalvarez.redtrack.dominio.modelo.Oferta;
 import com.miguelalvarez.redtrack.dominio.modelo.OfertaAnalizada;
 import com.miguelalvarez.redtrack.dominio.puerto.RepositorioOfertas;
 import com.miguelalvarez.redtrack.dominio.servicio.Normalizador;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,8 @@ import java.util.Optional;
  */
 @Repository
 public class RepositorioOfertasJpa implements RepositorioOfertas {
+
+    private static final Logger log = LoggerFactory.getLogger(RepositorioOfertasJpa.class);
 
     private final OfertaJpaRepository ofertas;
     private final OfertaFuenteJpaRepository apariciones;
@@ -34,7 +38,7 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
 
     @Override
     @Transactional
-    public Long guardar(OfertaAnalizada analizada) {
+    public void guardar(OfertaAnalizada analizada) {
         Oferta oferta = analizada.oferta();
         OfertaEntity entidad = new OfertaEntity();
 
@@ -47,7 +51,6 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
         apariciones.save(new OfertaFuenteEntity(
                 guardada.getId(), oferta.fuente(), oferta.idExterno(),
                 oferta.url(), Instant.now()));
-        return guardada.getId();
     }
 
     @Override
@@ -63,9 +66,16 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
 
     @Override
     @Transactional
-    public void registrarAparicion(Long idCanonica, String fuente, String idExterno, String url) {
-        apariciones.save(new OfertaFuenteEntity(
-                idCanonica, fuente, idExterno, url, Instant.now()));
+    public void registrarAparicion(String huellaCanonica, String fuente,
+                                   String idExterno, String url) {
+        // La huella es la clave natural; aqui se traduce al id que necesita la
+        // clave ajena, sin que eso salga del adaptador.
+        ofertas.findByHuella(huellaCanonica).ifPresentOrElse(
+                canonica -> apariciones.save(new OfertaFuenteEntity(
+                        canonica.getId(), fuente, idExterno, url, Instant.now())),
+                () -> log.warn("No existe oferta canonica con huella {}: "
+                        + "no se registra la aparicion de {}/{}",
+                        huellaCanonica, fuente, idExterno));
     }
 
     @Override
@@ -80,9 +90,8 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
     }
 
     @Override
-    public List<OfertaAnalizada> pendientesDeNotificar(int umbralEncaje) {
-        return ofertas
-                .findByNotificadaEnIsNullAndEncajeGreaterThanEqualOrderByEncajeDesc(umbralEncaje)
+    public List<OfertaAnalizada> pendientes() {
+        return ofertas.findByProcesadaEnIsNullOrderByEncajeDesc()
                 .stream()
                 .map(e -> mapeador.aDominioAnalizada(e, fuentesDe(e.getId())))
                 .toList();
@@ -90,11 +99,15 @@ public class RepositorioOfertasJpa implements RepositorioOfertas {
 
     @Override
     @Transactional
-    public void marcarNotificadas(List<Long> ids, Instant cuando) {
-        if (ids == null || ids.isEmpty()) {
+    public void marcarProcesadas(List<String> huellas, Instant cuando) {
+        if (huellas == null || huellas.isEmpty()) {
             return;
         }
-        ofertas.marcarNotificadas(ids, cuando);
+        int marcadas = ofertas.marcarProcesadas(huellas, cuando);
+        if (marcadas != huellas.size()) {
+            log.warn("Se pidio marcar {} ofertas como procesadas y se marcaron {}",
+                    huellas.size(), marcadas);
+        }
     }
 
     private List<String> fuentesDe(Long ofertaId) {

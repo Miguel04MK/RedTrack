@@ -22,7 +22,12 @@ services:
       - redtrack-datos:/var/lib/postgresql/data
     ports:
       # Solo en localhost. El puerto de Postgres NUNCA se abre al mundo.
-      - "127.0.0.1:5432:5432"
+      #
+      # Por defecto 5433 y no 5432: en Windows es muy habitual tener ya un
+      # PostgreSQL instalado como servicio ocupando el 5432, y Docker no puede
+      # publicar un puerto tomado. Dentro de la red de compose el contenedor
+      # sigue escuchando en 5432, asi que la app no se entera.
+      - "127.0.0.1:${POSTGRES_PUERTO_HOST:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-redtrack}"]
       interval: 10s
