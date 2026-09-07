@@ -180,17 +180,32 @@ encaje = (tecnologias + ubicacion + salario) x accesibilidad
 | Salario | 15 | banda por encima del objetivo 15 · por debajo 4 · sin publicar 6 |
 
 ```
-accesibilidad = factorSeniority x factorAnos
+accesibilidad = factorSeniority x factorAnos x factorSalario
 ```
 
-| Seniority | Factor | | Anos pedidos | Factor |
-|---|---:|---|---|---:|
-| JUNIOR | ×1.00 | | 0-1 | ×1.00 |
-| No lo dice | ×0.92 | | 2 | ×0.92 |
-| MID | ×0.75 | | 3 | ×0.70 |
-| SENIOR | ×0.18 | | 4 | ×0.40 |
-| | | | 5+ | ×0.20 |
-| | | | no lo dice | ×0.90 |
+| Seniority | Factor | | Anos pedidos | Factor | | Banda vs objetivo | Factor |
+|---|---:|---|---|---:|---|---|---:|
+| JUNIOR | ×1.00 | | 0-1 | ×1.00 | | hasta 1,6× | ×1.00 |
+| No lo dice | ×0.92 | | 2 | ×0.92 | | 1,6-2,0× | ×0.70 |
+| MID | ×0.75 | | 3 | ×0.70 | | 2,0-2,5× | ×0.40 |
+| SENIOR | ×0.18 | | 4 | ×0.40 | | mas de 2,5× | ×0.20 |
+| | | | 5+ | ×0.20 | | no publica | ×1.00 |
+| | | | no lo dice | ×0.90 | | | |
+
+**Por que el salario esta en los dos lados.** No es un error: son dos preguntas
+distintas sobre el mismo dato. Que una oferta pague 60.000 responde *"si"* a
+cuanto me gusta y *"no"* a si puedo optar.
+
+El caso que lo motivo: Minsait publico *"Full Stack Java-React"* con banda
+60.000-90.000 y sin la palabra *senior* en el titulo, y *"Senior Full-Stack
+Engineer"* con la banda **identica**. Mismo puesto, distinto titular. Sin esta
+senal, la primera era la unica oferta que superaba el umbral — el resumen tenia
+un 100% de falsos positivos.
+
+Un sueldo muy por encima del objetivo no es una buena noticia para un junior:
+es la prueba de que la oferta no es para el. Es un dato de seniority disfrazado
+de dato de compensacion. Es un proxy parcial (solo 3 de cada 15 ofertas publican
+banda) y no penaliza el silencio.
 
 **Por que la accesibilidad multiplica y no suma.** En el diseno inicial la
 seniority era un bloque de 20 puntos. Con datos reales, una oferta de *Senior

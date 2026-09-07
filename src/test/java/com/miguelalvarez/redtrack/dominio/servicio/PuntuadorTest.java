@@ -138,6 +138,59 @@ class PuntuadorTest {
     }
 
     @Nested
+    @DisplayName("el salario delata la seniority que el titulo calla")
+    class ElSalarioDelataLaSeniority {
+
+        @Test
+        @DisplayName("REGRESION: el caso Minsait, la unica oferta que pasaba y era senior")
+        void elCasoMinsait() {
+            // Minsait publico dos ofertas con la banda 60.000-90.000 IDENTICA:
+            // una decia "Senior" en el titulo y esta no. Mismo puesto. Sin la
+            // senal del salario, esta era la unica que superaba el umbral.
+            Analisis a = puntuador.analizar(new Oferta(
+                    "adzuna", "1", "Full Stack Java-React", "Minsait", "Vigo",
+                    Modalidad.DESCONOCIDA, 60000, 90000,
+                    "Full Stack Java-React con Java y Spring Boot.",
+                    "https://ejemplo", Idioma.ES, Instant.now(), Instant.now(), null),
+                    perfil());
+
+            assertThat(a.senal()).isEqualTo(Seniority.NO_DICE);
+            assertThat(a.superaUmbral(UMBRAL)).isFalse();
+            assertThat(a.banderasRojas()).anyMatch(b -> b.contains("no junior"));
+        }
+
+        @Test
+        @DisplayName("una banda cercana al objetivo no penaliza")
+        void bandaRazonableNoPenaliza() {
+            Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    28000, 32000, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+        }
+
+        @Test
+        @DisplayName("no publicar banda no penaliza: el silencio no es evidencia")
+        void sinBandaNoPenaliza() {
+            Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    null, null, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+        }
+
+        @Test
+        @DisplayName("el salario sigue sumando en el bloque: gustar y poder optar son cosas distintas")
+        void elSalarioAltoSigueGustando() {
+            Oferta alta = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    60000, 90000, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            // Suma lo maximo (gusta)...
+            assertThat(puntuador.puntosSalario(alta, perfil())).isEqualTo(15);
+            // ...y a la vez hunde la accesibilidad (no puedo optar).
+            assertThat(puntuador.factorSalario(alta, perfil())).isLessThan(0.5);
+        }
+    }
+
+    @Nested
     @DisplayName("descartar_si_titulo_contiene descarta de verdad")
     class FiltroDuroPorTitulo {
 
