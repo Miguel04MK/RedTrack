@@ -14,11 +14,16 @@ public enum Seniority {
      * La mayoria de las ofertas. No decir nada es mejor senal que decir MID:
      * una vacante que no se pronuncia suele estar abierta a perfiles junior.
      */
-    NO_DICE(0.85),
+    NO_DICE(0.92),
 
-    MID(0.50),
+    /**
+     * Etiqueta vaga: cada empresa la usa a su manera. Por eso no hunde la
+     * oferta por si sola. Quien decide de verdad son los anos requeridos, que
+     * entran como un segundo factor.
+     */
+    MID(0.75),
 
-    SENIOR(0.15);
+    SENIOR(0.18);
 
     private final double factor;
 
@@ -34,6 +39,10 @@ public enum Seniority {
      * que encaje bien en tecnologias, ubicacion y salario seguia superando el
      * umbral. Y una oferta senior no es una oferta un poco peor para un junior:
      * es una oferta que no sirve.
+     *
+     * <p>Este factor es solo la mitad de la accesibilidad: se multiplica ademas
+     * por el de los anos requeridos. La etiqueta es un proxy de los anos, asi
+     * que cuando la oferta dice los anos, mandan los anos.
      */
     public double factor() {
         return factor;

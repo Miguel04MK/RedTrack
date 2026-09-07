@@ -52,7 +52,7 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.senal()).isEqualTo(Seniority.NO_DICE);
-            assertThat(a.encaje()).isEqualTo(85);
+            assertThat(a.encaje()).isEqualTo(92);
         }
 
         @Test
@@ -67,7 +67,7 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.senal()).isEqualTo(Seniority.SENIOR);
-            assertThat(a.encaje()).isEqualTo(15);
+            assertThat(a.encaje()).isEqualTo(18);
             assertThat(a.superaUmbral(UMBRAL)).isFalse();
         }
 
@@ -84,6 +84,109 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.superaUmbral(UMBRAL)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("los anos separan la MID novata de la MID larga")
+    class LosAnosMandanSobreLaEtiqueta {
+
+        @Test
+        @DisplayName("una MID de 2 anos con encaje excepcional SI entra")
+        void midNovataConEncajeExcepcional() {
+            Analisis a = puntuador.analizar(oferta(
+                    "Desarrollador Java",
+                    "Perfil mid-level. Java y Spring Boot. Se piden 2 anos de experiencia."),
+                    perfil());
+
+            assertThat(a.senal()).isEqualTo(Seniority.MID);
+            assertThat(a.anosRequeridos()).isEqualTo(2);
+            // 100 bruto x MID 0.75 x dos anos 0.92
+            assertThat(a.encaje()).isEqualTo(69);
+            assertThat(a.superaUmbral(UMBRAL)).isTrue();
+        }
+
+        @Test
+        @DisplayName("una MID de 4 anos NO entra ni con encaje excepcional")
+        void midLargaNoEntraNiSiendoPerfecta() {
+            Analisis a = puntuador.analizar(oferta(
+                    "Desarrollador Java",
+                    "Perfil mid-level. Java y Spring Boot. Se piden 4 anos de experiencia."),
+                    perfil());
+
+            assertThat(a.senal()).isEqualTo(Seniority.MID);
+            assertThat(a.anosRequeridos()).isEqualTo(4);
+            // Misma etiqueta que el test anterior, mismo encaje bruto:
+            // lo unico que cambia son los anos, y decide.
+            assertThat(a.encaje()).isEqualTo(30);
+            assertThat(a.superaUmbral(UMBRAL)).isFalse();
+        }
+
+        @Test
+        @DisplayName("la etiqueta sola no basta: 2 anos con encaje mediocre tampoco entra")
+        void midNovataConEncajeMediocreNoEntra() {
+            // Sin salario publicado y fuera de las ubicaciones deseadas.
+            Analisis a = puntuador.analizar(new Oferta(
+                    "adzuna", "9", "Desarrollador Java", "Coremain", "Cuenca",
+                    Modalidad.PRESENCIAL, null, null,
+                    "Perfil mid-level. Java. Se piden 2 anos de experiencia.",
+                    "https://ejemplo", Idioma.ES, Instant.now(), Instant.now(), null),
+                    perfil());
+
+            assertThat(a.superaUmbral(UMBRAL)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("el salario delata la seniority que el titulo calla")
+    class ElSalarioDelataLaSeniority {
+
+        @Test
+        @DisplayName("REGRESION: el caso Minsait, la unica oferta que pasaba y era senior")
+        void elCasoMinsait() {
+            // Minsait publico dos ofertas con la banda 60.000-90.000 IDENTICA:
+            // una decia "Senior" en el titulo y esta no. Mismo puesto. Sin la
+            // senal del salario, esta era la unica que superaba el umbral.
+            Analisis a = puntuador.analizar(new Oferta(
+                    "adzuna", "1", "Full Stack Java-React", "Minsait", "Vigo",
+                    Modalidad.DESCONOCIDA, 60000, 90000,
+                    "Full Stack Java-React con Java y Spring Boot.",
+                    "https://ejemplo", Idioma.ES, Instant.now(), Instant.now(), null),
+                    perfil());
+
+            assertThat(a.senal()).isEqualTo(Seniority.NO_DICE);
+            assertThat(a.superaUmbral(UMBRAL)).isFalse();
+            assertThat(a.banderasRojas()).anyMatch(b -> b.contains("no junior"));
+        }
+
+        @Test
+        @DisplayName("una banda cercana al objetivo no penaliza")
+        void bandaRazonableNoPenaliza() {
+            Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    28000, 32000, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+        }
+
+        @Test
+        @DisplayName("no publicar banda no penaliza: el silencio no es evidencia")
+        void sinBandaNoPenaliza() {
+            Oferta o = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    null, null, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            assertThat(puntuador.factorSalario(o, perfil())).isEqualTo(1.00);
+        }
+
+        @Test
+        @DisplayName("el salario sigue sumando en el bloque: gustar y poder optar son cosas distintas")
+        void elSalarioAltoSigueGustando() {
+            Oferta alta = new Oferta("adzuna", "1", "t", "e", "vigo", Modalidad.HIBRIDO,
+                    60000, 90000, "", "u", Idioma.ES, Instant.now(), Instant.now(), null);
+
+            // Suma lo maximo (gusta)...
+            assertThat(puntuador.puntosSalario(alta, perfil())).isEqualTo(15);
+            // ...y a la vez hunde la accesibilidad (no puedo optar).
+            assertThat(puntuador.factorSalario(alta, perfil())).isLessThan(0.5);
         }
     }
 
@@ -148,15 +251,16 @@ class PuntuadorTest {
         }
 
         @Test
-        @DisplayName("pedir muchos anos anula ese bloque")
-        void muchosAnosAnulanElBloque() {
+        @DisplayName("pedir muchos anos hunde la oferta aunque el titulo diga junior")
+        void muchosAnosHundenLaOferta() {
             Analisis a = puntuador.analizar(oferta(
                     "Desarrollador Java Junior",
                     "Java y Spring Boot. Se requieren al menos 6 anos."),
                     perfil());
 
             assertThat(a.anosRequeridos()).isEqualTo(6);
-            assertThat(a.encaje()).isEqualTo(80);
+            // Encaje perfecto (100 bruto) x JUNIOR 1.00 x seis anos 0.20
+            assertThat(a.encaje()).isEqualTo(20);
             assertThat(a.banderasRojas()).anyMatch(b -> b.contains("6 anos"));
         }
 
@@ -166,7 +270,7 @@ class PuntuadorTest {
                     new Oferta("x", "1", "t", "e", "Berlin", Modalidad.REMOTO,
                             null, null, "", "u", Idioma.ES,
                             Instant.now(), Instant.now(), null), perfil()))
-                    .isEqualTo(15);
+                    .isEqualTo(20);
         }
 
         @Test
