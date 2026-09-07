@@ -28,6 +28,7 @@ public interface OfertaJpaRepository extends JpaRepository<OfertaEntity, Long> {
             int umbral);
 
     @Modifying
-    @Query("update OfertaEntity o set o.notificadaEn = :cuando where o.id in :ids")
-    int marcarNotificadas(@Param("ids") List<Long> ids, @Param("cuando") Instant cuando);
+    @Query("update OfertaEntity o set o.notificadaEn = :cuando where o.huella in :huellas")
+    int marcarNotificadas(@Param("huellas") List<String> huellas,
+                          @Param("cuando") Instant cuando);
 }

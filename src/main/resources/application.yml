@@ -3,7 +3,10 @@ spring:
     name: redtrack
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/redtrack}
+    # 5433 es el puerto que publica docker-compose en el host: el 5432 suele
+    # estar ocupado por un PostgreSQL instalado en el sistema. Dentro de Docker
+    # esto lo sobreescribe SPRING_DATASOURCE_URL apuntando a postgres:5432.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/redtrack}
     username: ${POSTGRES_USER:redtrack}
     password: ${POSTGRES_PASSWORD:redtrack}
 

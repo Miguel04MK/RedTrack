@@ -17,27 +17,32 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Reparte 100 puntos de encaje entre cinco bloques:
+ * Reparte 100 puntos de encaje entre cuatro bloques y los multiplica por la
+ * seniority:
  *
  * <pre>
- *   50  tecnologias
- *   20  seniority
- *   15  anos requeridos
- *   10  ubicacion
- *    5  salario
+ *   encaje = (55 tecnologias + 20 anos + 15 ubicacion + 10 salario) x factor
+ *
+ *   JUNIOR   x1.00     MID     x0.50
+ *   NO_DICE  x0.85     SENIOR  x0.15
  * </pre>
  *
- * <p>Las banderas rojas NO restan. Se muestran aparte: la maquina informa,
- * la persona decide. Ademas de ser mejor producto, evita que una oferta buena
- * caiga del resumen por un "se valora ingles".
+ * <p>La seniority MULTIPLICA en vez de sumar, y esto es una desviacion
+ * deliberada del diseno inicial. Con la seniority como bloque de 20 puntos,
+ * las ofertas senior reales sacaban 73 sobre 100 y superaban el umbral: los
+ * otros bloques compensaban el cero. Ver {@link Seniority#factor()}.
+ *
+ * <p>Las banderas rojas NO restan. Se muestran aparte: la maquina informa, la
+ * persona decide. Asi una oferta buena no cae del resumen por un "se valora
+ * ingles". La excepcion es {@code descartar_si_titulo_contiene}, que si es un
+ * filtro duro: el nombre del ajuste promete descartar, y descarta.
  */
 public final class Puntuador {
 
-    private static final int MAX_TECNOLOGIAS = 50;
-    private static final int MAX_SENIORITY = 20;
-    private static final int MAX_ANOS = 15;
-    private static final int MAX_UBICACION = 10;
-    private static final int MAX_SALARIO = 5;
+    private static final int MAX_TECNOLOGIAS = 55;
+    private static final int MAX_ANOS = 20;
+    private static final int MAX_UBICACION = 15;
+    private static final int MAX_SALARIO = 10;
 
     private static final Pattern INGLES_ALTO = Pattern.compile(
             "ingl[ée]s\\s*(alto|avanzado|fluido|c1|c2)|\\bc1\\b|\\bc2\\b|fluent\\s+english|"
@@ -78,11 +83,14 @@ public final class Puntuador {
         Seniority senal = extractor.seniority(texto);
         Integer anos = extractor.anosRequeridos(texto);
 
-        int encaje = puntosTecnologias(pedidas, perfil)
-                + puntosSeniority(senal)
+        int bruto = puntosTecnologias(pedidas, perfil)
                 + puntosAnos(anos)
                 + puntosUbicacion(oferta, perfil)
                 + puntosSalario(oferta, perfil);
+
+        int encaje = descartadaPorTitulo(oferta, perfil)
+                ? 0
+                : (int) Math.round(bruto * senal.factor());
 
         return new Analisis(
                 acotar(encaje),
@@ -99,7 +107,16 @@ public final class Puntuador {
     //  Bloques de puntuacion
     // ------------------------------------------------------------------
 
-    /** 50 pts: suma de pesos de las pedidas que tengo / suma de pesos de todas las pedidas. */
+    /**
+     * 55 pts: suma de pesos de las pedidas que tengo / suma de pesos de todas
+     * las pedidas.
+     *
+     * <p>El denominador aplica un peso minimo de 1. Sin eso, una tecnologia
+     * declarada con {@code peso: 0} no entra en la cuenta y exigirla sale
+     * gratis: la oferta podria pedir Angular, .NET y Kafka sin que la nota
+     * bajara un punto. El peso mide lo que importa que la oferta la pida; que
+     * se tenga o no ya lo dice el nivel.
+     */
     int puntosTecnologias(Set<String> pedidas, Perfil perfil) {
         if (pedidas.isEmpty()) {
             return 0;
@@ -112,7 +129,7 @@ public final class Puntuador {
                 continue;
             }
             numerador += t.get().pesoEfectivo();
-            denominador += t.get().peso();
+            denominador += Math.max(1, t.get().peso());
         }
         if (denominador == 0) {
             return 0;
@@ -120,57 +137,60 @@ public final class Puntuador {
         return (int) Math.round(MAX_TECNOLOGIAS * (numerador / denominador));
     }
 
-    /** 20 pts. Una oferta que no se pronuncia vale mas que una explicitamente MID. */
-    int puntosSeniority(Seniority senal) {
-        return switch (senal) {
-            case JUNIOR -> 20;
-            case NO_DICE -> 12;
-            case MID -> 6;
-            case SENIOR -> 0;
-        };
-    }
-
-    /** 15 pts. */
+    /** 20 pts. */
     int puntosAnos(Integer anos) {
         if (anos == null) {
-            return 10;
+            return 13;
         }
         if (anos <= 1) {
-            return 15;
+            return MAX_ANOS;
         }
         return switch (anos) {
-            case 2 -> 10;
-            case 3 -> 5;
+            case 2 -> 13;
+            case 3 -> 7;
             default -> 0;
         };
     }
 
-    /** 10 pts. */
+    /** 15 pts. */
     int puntosUbicacion(Oferta oferta, Perfil perfil) {
         if (oferta.modalidad() == Modalidad.REMOTO) {
-            return 10;
+            return MAX_UBICACION;
         }
         String ubicacion = normalizador.normalizar(oferta.ubicacion());
         if (ubicacion.isBlank()) {
-            return 4;
+            return 6;
         }
         for (String deseada : perfil.preferencias().ubicacionesDeseadas()) {
             if (ubicacion.contains(normalizador.normalizar(deseada))) {
-                return 10;
+                return MAX_UBICACION;
             }
         }
-        // TODO(fase-2): distinguir "resto de Espana" (4) de "extranjero" (0)
+        // TODO(fase-2): distinguir "resto de Espana" (6) de "extranjero" (0)
         //               con el catalogo de provincias del Normalizador.
-        return 4;
+        return 6;
     }
 
-    /** 5 pts. Publicar banda por debajo del objetivo puntua MENOS que no publicarla. */
+    /** 10 pts. Publicar banda por debajo del objetivo puntua MENOS que no publicarla. */
     int puntosSalario(Oferta oferta, Perfil perfil) {
         if (!oferta.tieneSalario()) {
-            return 3;
+            return 6;
         }
         Integer suelo = oferta.salarioMin() != null ? oferta.salarioMin() : oferta.salarioMax();
-        return suelo >= perfil.preferencias().salarioObjetivo() ? 5 : 2;
+        return suelo >= perfil.preferencias().salarioObjetivo() ? MAX_SALARIO : 4;
+    }
+
+    /**
+     * Filtro duro: si el titulo contiene una de las palabras vetadas en el
+     * perfil, la oferta va a cero y no hay encaje que la salve.
+     *
+     * <p>Se mira solo el TITULO, no la descripcion: "reportaras al arquitecto"
+     * no convierte una oferta junior en una oferta de arquitecto.
+     */
+    boolean descartadaPorTitulo(Oferta oferta, Perfil perfil) {
+        String titulo = normalizador.normalizar(oferta.titulo());
+        return perfil.preferencias().descartarSiTituloContiene().stream()
+                .anyMatch(veto -> titulo.contains(normalizador.normalizar(veto)));
     }
 
     // ------------------------------------------------------------------

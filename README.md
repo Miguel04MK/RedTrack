@@ -164,15 +164,38 @@ resumen por un "se valora ingles".
 
 ## Puntuacion
 
-100 puntos repartidos en cinco bloques:
+Cuatro bloques que suman 100, multiplicados por la seniority:
+
+```
+encaje = (tecnologias + anos + ubicacion + salario) x factorSeniority
+```
 
 | Bloque | Puntos | Criterio |
 |---|---:|---|
-| Tecnologias | 50 | pesos de las pedidas que tengo / pesos de todas las pedidas, ponderado por nivel |
-| Seniority | 20 | JUNIOR 20 · no dice 12 · MID 6 · SENIOR 0 |
-| Anos requeridos | 15 | 0-1 → 15 · 2 → 10 · 3 → 5 · 4+ → 0 · no dice → 10 |
-| Ubicacion | 10 | remoto o Galicia 10 · resto de Espana 4 · extranjero 0 |
-| Salario | 5 | banda por encima del objetivo 5 · por debajo 2 · sin publicar 3 |
+| Tecnologias | 55 | pesos de las pedidas que tengo / pesos de todas las pedidas, ponderado por nivel |
+| Anos requeridos | 20 | 0-1 → 20 · 2 → 13 · 3 → 7 · 4+ → 0 · no dice → 13 |
+| Ubicacion | 15 | remoto o Galicia 15 · resto de Espana 6 · extranjero 0 |
+| Salario | 10 | banda por encima del objetivo 10 · por debajo 4 · sin publicar 6 |
+
+| Seniority | Factor |
+|---|---:|
+| JUNIOR | ×1.00 |
+| No lo dice | ×0.85 |
+| MID | ×0.50 |
+| SENIOR | ×0.15 |
+
+**Por que la seniority multiplica y no suma.** En el diseno inicial era un bloque
+de 20 puntos. Con datos reales, una oferta de *Senior Java Software Engineer*
+sacaba **73 sobre 100** y superaba el umbral: mencionaba Java, saturaba el bloque
+de tecnologias, y los demas bloques compensaban de sobra el cero de seniority.
+
+Cualquier bloque que suma se puede compensar. Y una oferta senior no es una
+oferta un poco peor para un junior: es una oferta que no sirve. Por eso
+multiplica.
+
+Ademas, `descartar_si_titulo_contiene` es un filtro duro y manda a cero: el
+nombre del ajuste promete descartar. Se mira solo el titulo — "reportaras al
+arquitecto" no convierte una oferta junior en una de arquitecto.
 
 El perfil vive en [`perfil.yaml`](src/main/resources/perfil.yaml), fuera del
 codigo, para ajustar pesos y umbral sin recompilar.

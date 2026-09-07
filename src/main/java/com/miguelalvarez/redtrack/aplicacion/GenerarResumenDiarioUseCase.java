@@ -47,7 +47,7 @@ public class GenerarResumenDiarioUseCase {
         }
 
         if (notificador.enviar(resumen)) {
-            repositorio.marcarNotificadas(idsDe(resumen), Instant.now(reloj));
+            repositorio.marcarNotificadas(huellasDe(resumen), Instant.now(reloj));
             log.info("Resumen enviado por {} con {} ofertas",
                     notificador.nombre(), resumen.cuantas());
         } else {
@@ -58,9 +58,9 @@ public class GenerarResumenDiarioUseCase {
         return resumen;
     }
 
-    private List<Long> idsDe(ResumenDiario resumen) {
-        // TODO(fase-3): OfertaAnalizada aun no arrastra el id de base de datos.
-        //               Anadirlo al mapear desde la entidad y devolverlo aqui.
-        return List.of();
+    private List<String> huellasDe(ResumenDiario resumen) {
+        return resumen.ofertas().stream()
+                .map(analizada -> analizada.oferta().huella())
+                .toList();
     }
 }

@@ -2,11 +2,15 @@
 #  Perfil contra el que se puntuan las ofertas.
 #
 #  Vive fuera del codigo para poder ajustarlo sin recompilar.
-#  peso:  importancia relativa (1 = accesorio, 3 = troncal)
-#  nivel: ALTO | MEDIO | BAJO | NINGUNO
 #
-#  Las tecnologias con nivel NINGUNO SI hay que listarlas: son las que
-#  generan la bandera roja "tecnologia troncal que no tienes".
+#  nivel: cuanto la dominas.  ALTO | MEDIO | BAJO | NINGUNO
+#  peso:  cuanto IMPORTA que la oferta la pida (1 accesorio, 3 troncal).
+#         Son dos ejes distintos: el peso NO es lo mucho que te gusta la
+#         tecnologia. Una que no tienes pesa mucho precisamente porque
+#         exigirla te deja fuera.
+#
+#  Por eso las de nivel NINGUNO llevan peso alto y no peso 0: el peso es el
+#  denominador del bloque de tecnologias, y con peso 0 exigirlas salia gratis.
 # ============================================================
 
 tecnologias:
@@ -61,24 +65,26 @@ tecnologias:
     nivel: BAJO
     peso: 1
 
-  # --- Las que NO se tienen: alimentan las banderas rojas ---
+  # --- Las que NO se tienen ---
+  # Peso alto a proposito: si una oferta pide Angular o .NET como stack
+  # principal, es una oferta que no te sirve, y la nota tiene que reflejarlo.
   - nombre: Angular
     nivel: NINGUNO
-    peso: 0
+    peso: 3
   - nombre: .NET
     nivel: NINGUNO
-    peso: 0
+    peso: 3
     alias: ["dotnet", "c#", "asp.net"]
   - nombre: PHP
     nivel: NINGUNO
-    peso: 0
+    peso: 3
     alias: ["laravel", "symfony"]
   - nombre: Kafka
     nivel: NINGUNO
-    peso: 0
+    peso: 2
   - nombre: Kubernetes
     nivel: NINGUNO
-    peso: 0
+    peso: 2
     alias: ["k8s"]
 
 preferencias:
