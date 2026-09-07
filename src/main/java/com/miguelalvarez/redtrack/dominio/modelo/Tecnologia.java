@@ -5,8 +5,15 @@ import java.util.Locale;
 import java.util.stream.Stream;
 
 /**
- * Una tecnologia del perfil, con su nivel de dominio y su peso relativo.
+ * Una tecnologia del perfil.
  *
+ * <p>{@code nivel} y {@code peso} son dos ejes distintos y conviene no
+ * mezclarlos: el nivel es cuanto se domina, el peso es cuanto importa que una
+ * oferta la pida. Una tecnologia que no se tiene pesa mucho, precisamente
+ * porque exigirla deja fuera.
+ *
+ * @param peso  1 accesorio, 3 troncal. Es el denominador del bloque de
+ *              tecnologias del {@code Puntuador}.
  * @param alias variantes con las que aparece escrita en las ofertas
  *              ("springboot", "spring-boot", "java 21"...)
  */
