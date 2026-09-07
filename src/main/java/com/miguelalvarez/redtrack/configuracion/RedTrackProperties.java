@@ -51,10 +51,17 @@ public record RedTrackProperties(
     ) {
     }
 
+    /**
+     * @param dolaresPorEuro Remotive publica los salarios en dolares y en texto
+     *                       libre. Una aproximacion basta: la banda ya es
+     *                       orientativa, y no merece la pena una llamada a una
+     *                       API de divisas para esto.
+     */
     public record Remotive(
             boolean activa,
             String url,
-            String categoria
+            String categoria,
+            double dolaresPorEuro
     ) {
     }
 

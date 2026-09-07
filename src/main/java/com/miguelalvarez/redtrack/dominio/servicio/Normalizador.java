@@ -31,6 +31,10 @@ public final class Normalizador {
     private static final Pattern ESPACIOS = Pattern.compile("\\s+");
     private static final Pattern DIACRITICOS = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
+    private static final Pattern SCRIPT_O_STYLE = Pattern.compile(
+            "<(script|style)\\b[^>]*>.*?</\\1>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern ETIQUETA = Pattern.compile("<[^>]+>");
+
     /**
      * Minusculas, sin tildes, sin puntuacion, espacios colapsados y sin coletillas.
      *
@@ -51,6 +55,34 @@ public final class Normalizador {
         resultado = PUNTUACION.matcher(resultado).replaceAll(" ");
         resultado = ESPACIOS.matcher(resultado).replaceAll(" ");
         return resultado.trim();
+    }
+
+    /**
+     * Quita el marcado HTML y deja texto plano.
+     *
+     * <p>Remotive devuelve la descripcion en HTML. Pasarsela tal cual al
+     * detector de tecnologias seria buscar dentro de atributos de estilo y de
+     * nombres de clase: "go" aparece en cualquier hoja de estilos, y un
+     * {@code <div class="h2">} no es una tecnologia.
+     *
+     * <p>Se eliminan primero los bloques cuyo contenido tampoco es texto
+     * (script y style), luego las etiquetas, y por ultimo se traducen las
+     * entidades mas comunes.
+     */
+    public String sinHtml(String html) {
+        if (html == null || html.isBlank()) {
+            return "";
+        }
+        String texto = SCRIPT_O_STYLE.matcher(html).replaceAll(" ");
+        texto = ETIQUETA.matcher(texto).replaceAll(" ");
+        texto = texto
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
+        return ESPACIOS.matcher(texto).replaceAll(" ").trim();
     }
 
     /**

@@ -97,11 +97,12 @@ redtrack:
     app-key: ${ADZUNA_APP_KEY:}
 
   remotive:
-    # TODO(fase-3): activar cuando el adaptador este implementado y verificado
-    #               con un curl a la API real.
-    activa: false
+    # Verificada con curl: devuelve la descripcion COMPLETA (2.600-28.000
+    # caracteres), que es justo lo que Adzuna trunca a 500.
+    activa: true
     url: https://remotive.com
     categoria: software-dev
+    dolares-por-euro: 1.08
 
   telegram:
     activo: true
