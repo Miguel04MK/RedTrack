@@ -1,0 +1,101 @@
+# ============================================================
+#  Perfil contra el que se puntuan las ofertas.
+#
+#  Vive fuera del codigo para poder ajustarlo sin recompilar.
+#  peso:  importancia relativa (1 = accesorio, 3 = troncal)
+#  nivel: ALTO | MEDIO | BAJO | NINGUNO
+#
+#  Las tecnologias con nivel NINGUNO SI hay que listarlas: son las que
+#  generan la bandera roja "tecnologia troncal que no tienes".
+# ============================================================
+
+tecnologias:
+  - nombre: Java
+    nivel: ALTO
+    peso: 3
+    alias: ["java 21", "java 17", "java 11", "java 8", "jdk"]
+
+  - nombre: Spring Boot
+    nivel: ALTO
+    peso: 3
+    alias: ["springboot", "spring-boot", "spring"]
+
+  - nombre: PostgreSQL
+    nivel: MEDIO
+    peso: 2
+    alias: ["postgres", "psql"]
+
+  - nombre: SQL
+    nivel: MEDIO
+    peso: 2
+
+  - nombre: JPA
+    nivel: MEDIO
+    peso: 2
+    alias: ["hibernate", "spring data jpa"]
+
+  - nombre: React
+    nivel: MEDIO
+    peso: 2
+    alias: ["reactjs", "react.js"]
+
+  - nombre: JavaScript
+    nivel: MEDIO
+    peso: 2
+    alias: ["js", "ecmascript"]
+
+  - nombre: Docker
+    nivel: MEDIO
+    peso: 2
+
+  - nombre: Git
+    nivel: ALTO
+    peso: 1
+
+  - nombre: AWS
+    nivel: BAJO
+    peso: 2
+    alias: ["amazon web services", "ec2"]
+
+  - nombre: Python
+    nivel: BAJO
+    peso: 1
+
+  # --- Las que NO se tienen: alimentan las banderas rojas ---
+  - nombre: Angular
+    nivel: NINGUNO
+    peso: 0
+  - nombre: .NET
+    nivel: NINGUNO
+    peso: 0
+    alias: ["dotnet", "c#", "asp.net"]
+  - nombre: PHP
+    nivel: NINGUNO
+    peso: 0
+    alias: ["laravel", "symfony"]
+  - nombre: Kafka
+    nivel: NINGUNO
+    peso: 0
+  - nombre: Kubernetes
+    nivel: NINGUNO
+    peso: 0
+    alias: ["k8s"]
+
+preferencias:
+  ubicaciones_deseadas:
+    - galicia
+    - pontevedra
+    - vigo
+    - a coruna
+    - santiago
+    - remoto
+  salario_objetivo: 24000
+  idioma_maximo: B1
+  descartar_si_titulo_contiene:
+    - senior
+    - lead
+    - arquitecto
+    - manager
+  anos_maximos_aceptables: 3
+  # Solo entran en el resumen diario las ofertas con encaje >= a esto.
+  umbral_encaje: 55
