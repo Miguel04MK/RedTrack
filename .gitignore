@@ -1,0 +1,100 @@
+# ============================================================
+#  Instrucciones locales para agentes (NO se publica)
+# ============================================================
+CLAUDE.md
+.claude/
+
+# ============================================================
+#  Documentacion privada del proyecto
+#  El guion contiene informacion personal de busqueda de empleo.
+# ============================================================
+Proyecto - Radar de ofertas (guion completo).txt
+docs/privado/
+
+# ============================================================
+#  Secretos  -  NUNCA subir tokens ni claves de API
+# ============================================================
+.env
+.env.local
+*.pem
+perfil.local.yaml
+src/main/resources/application-local.yml
+src/main/resources/application-secrets.yml
+
+# ============================================================
+#  Maven
+# ============================================================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ============================================================
+#  Java
+# ============================================================
+*.class
+*.jar
+*.war
+*.ear
+!.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
+replay_pid*
+
+# ============================================================
+#  IDE
+# ============================================================
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+# Eclipse / STS
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache
+# VS Code
+.vscode/
+# NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# ============================================================
+#  Sistema operativo
+# ============================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+# OneDrive (esta carpeta vive dentro de OneDrive)
+*.tmp
+~$*
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Linux
+*~
+.directory
+
+# ============================================================
+#  Logs y datos locales
+# ============================================================
+*.log
+logs/
+datos/
+postgres-data/
