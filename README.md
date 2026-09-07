@@ -97,6 +97,47 @@ Para desarrollo en Windows, `.\build.ps1` compila y pasa los tests.
 
 ---
 
+## El resumen diario
+
+Un mensaje cada manana laborable a las 8:00, con **dos secciones que responden a
+preguntas distintas**:
+
+```
+RedTrack - 1 para ti · 3 podrian interesarte
+
+PARA TI
+
+[87%] Desarrollador Java Junior - Coremain
+Santiago · Hibrido · 21.000-25.000 EUR
+Pide: Java, Spring Boot, PostgreSQL
+Te falta: nada
+https://...
+
+PODRIAN INTERESARTE
+Junior de desarrollo, aunque no sea tu stack.
+
+[22%] Fullstack Developer - 25.000 Al Ano - Remoto - Landra Sistemas
+Galicia · Remoto · 25.000 EUR
+https://...
+```
+
+**Para ti** son las que superan el umbral de encaje: tu stack, y puedes optar.
+
+**Podrian interesarte** son puestos junior de desarrollo del stack que sea.
+Existe porque el mercado junior de una tecnologia concreta se seca semanas
+enteras — en una semana real, Adzuna no tenia **ni una** oferta junior de Java en
+Galicia — y **un resumen que nunca llega es indistinguible de un resumen roto**.
+
+La segunda seccion **no baja el liston** de lo que el sistema considera bueno:
+responde a otra pregunta. Por eso ignora el encaje por completo y solo mira si el
+puesto es alcanzable. Si mirase el encaje, seria otra vez la primera lista con el
+liston mas bajo.
+
+Cuando el stack no es el tuyo, se dice: *"Stack que no tienes: PHP"*. La maquina
+informa, la persona decide.
+
+---
+
 ## Decisiones tecnicas, y por que
 
 ### No hay scraping, y es a proposito
@@ -148,6 +189,23 @@ Implementado con dos beans: `OllamaAnalizador` bajo
 `@ConditionalOnProperty(radar.ia.activa=true)` y `NuloAnalizador` bajo
 `@ConditionalOnMissingBean`. Timeout de 5 segundos: con 30 ofertas, un timeout
 largo hace que la tarea diaria no termine nunca.
+
+### Los terminos de busqueda son el filtro de categoria
+
+Para la seccion "podrian interesarte" hay que buscar puestos junior de cualquier
+stack, y ahi Adzuna devuelve *Junior Territory Manager*, *Comercial Tecnico
+Junior* y *Practicas RRHH*.
+
+Lo evidente seria filtrar con el parametro `category=it-jobs`, y **funciona** —
+pero es una trampa: **13 de cada 17 ofertas de informatica reales llegan con
+`category: unknown`**, asi que filtrar por categoria tira el 76% de las buenas.
+Precision alta, recall pesimo.
+
+El filtro acaba siendo doble: terminos de busqueda especificos
+(`desarrollador junior`, no `junior`) y una comprobacion del titulo con terminos
+solo positivos. Nada tan generico como *"tecnico"*, que es el que arrastra la
+mayor parte del ruido. Los tests usan titulos reales devueltos por la API,
+odontologos incluidos.
 
 ### Postgres en la instancia, no RDS
 
@@ -248,8 +306,23 @@ claves y sin depender de que Adzuna este arriba.
 
 ## Limitaciones conocidas
 
+- **Adzuna recorta las descripciones a 500 caracteres.** Es el techo del sistema,
+  y esta medido: sobre 15 ofertas reales, el minimo son 482 caracteres, el maximo
+  500, y todas acaban en `…`. No es un parametro que falte usar — lo dice su
+  documentacion: *"we currently only provide a snipped of the job description"*.
+  Consecuencias medidas: la modalidad sale `DESCONOCIDA` en **12 de 15** ofertas,
+  los anos requeridos en **13 de 15**, y el detector de tecnologias solo ve las
+  que caben en el teaser. **No se arregla con un modelo de IA**: el cuello de
+  botella es el acceso al texto, no la capacidad de analizarlo, y seguir el
+  `redirect_url` para leer el anuncio entero seria scraping. Se arregla con
+  fuentes que devuelvan la descripcion completa.
 - La deduplicacion **falla con ofertas de ETT** que reescriben el titulo entero.
   La huella no coincide y la similitud tampoco llega al umbral.
+- Una misma vacante **sembrada por varios municipios** genera una fila por
+  municipio: la huella incluye la ubicacion. Visto en datos reales, con el mismo
+  puesto publicado en Arbo, Chantada, Mos y Pontevedra.
+- El salario como evidencia de seniority es un **proxy parcial**: solo 3 de cada
+  15 ofertas publican banda.
 - **El modelo no cabe en la EC2 gratuita.** Una t2.micro tiene 1 GB de RAM: en
   perfil `prod` la IA va desactivada, y no es un olvido.
 - Las **fuentes en ingles introducen ruido**: muchas piden un nivel de idioma que
@@ -263,6 +336,14 @@ claves y sin depender de que Adzuna este arriba.
 
 ## v2
 
+- **Fuentes con la descripcion completa** (Remotive, Arbeitnow, Jobicy). Es lo
+  que destapona el proyecto: con el texto entero, la deteccion de tecnologias y
+  la extraccion de anos empiezan a funcionar de verdad, y ahi si tiene sentido
+  meter un modelo. Todo lo demas son parches inteligentes alrededor de un agujero
+  de informacion.
+- Aprovechar los parametros de Adzuna que aun no se usan: `what_exclude` para no
+  gastar el cupo de resultados trayendo ofertas senior, mas `contract_time` y
+  `contract_type`, que son datos estructurados y fiables.
 - Catalogo de provincias para afinar el bloque de ubicacion.
 - Adaptador generico de RSS: N fuentes por el precio de una.
 - Despliegue automatico por SSH desde GitHub Actions en cada push a `main`.
