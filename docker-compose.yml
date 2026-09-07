@@ -1,0 +1,55 @@
+# ============================================================
+#  RedTrack - levantar todo con un solo comando:
+#
+#      cp .env.example .env    (y rellenar)
+#      docker compose up -d
+#
+#  Postgres va en la misma instancia dentro de Docker, no en RDS:
+#  para este volumen de datos RDS no aporta nada y deja de ser gratis
+#  al cabo de un ano.
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: redtrack-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-redtrack}
+      POSTGRES_USER: ${POSTGRES_USER:-redtrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redtrack}
+    volumes:
+      # Volumen con nombre: sin esto se pierden todos los datos al reiniciar.
+      - redtrack-datos:/var/lib/postgresql/data
+    ports:
+      # Solo en localhost. El puerto de Postgres NUNCA se abre al mundo.
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-redtrack}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: redtrack-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-redtrack}
+      POSTGRES_USER: ${POSTGRES_USER:-redtrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redtrack}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      REDTRACK_IA_ACTIVA: ${REDTRACK_IA_ACTIVA:-false}
+      TZ: Europe/Madrid
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  redtrack-datos:
