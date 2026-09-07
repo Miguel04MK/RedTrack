@@ -17,20 +17,26 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Reparte 100 puntos de encaje entre cuatro bloques y los multiplica por la
- * seniority:
+ * El encaje responde a DOS preguntas distintas, y por eso tiene dos partes.
  *
  * <pre>
- *   encaje = (55 tecnologias + 20 anos + 15 ubicacion + 10 salario) x factor
+ *   ¿cuanto me gusta?      ->  suma      65 tecnologias + 20 ubicacion + 15 salario
+ *   ¿tengo alguna opcion?  ->  multiplica  factorSeniority x factorAnos
  *
- *   JUNIOR   x1.00     MID     x0.50
- *   NO_DICE  x0.85     SENIOR  x0.15
+ *   encaje = (tecnologias + ubicacion + salario) x accesibilidad
  * </pre>
  *
- * <p>La seniority MULTIPLICA en vez de sumar, y esto es una desviacion
- * deliberada del diseno inicial. Con la seniority como bloque de 20 puntos,
- * las ofertas senior reales sacaban 73 sobre 100 y superaban el umbral: los
- * otros bloques compensaban el cero. Ver {@link Seniority#factor()}.
+ * <p>La accesibilidad MULTIPLICA en vez de sumar, y es una desviacion
+ * deliberada del diseno inicial motivada por los datos: con la seniority como
+ * bloque de 20 puntos, las ofertas senior reales sacaban 73 sobre 100 y
+ * superaban el umbral, porque los otros bloques compensaban el cero. Un bloque
+ * que suma siempre se puede compensar.
+ *
+ * <p>Los anos requeridos tambien viven en el multiplicador, y no en un bloque
+ * que suma. La etiqueta de seniority es un proxy de los anos: cuando la oferta
+ * dice los anos, mandan los anos. Asi una MID de dos anos con encaje
+ * excepcional puede entrar, y una MID de cuatro no entra ni siendo perfecta,
+ * sin necesidad de inventar categorias intermedias en el enum.
  *
  * <p>Las banderas rojas NO restan. Se muestran aparte: la maquina informa, la
  * persona decide. Asi una oferta buena no cae del resumen por un "se valora
@@ -39,10 +45,9 @@ import java.util.regex.Pattern;
  */
 public final class Puntuador {
 
-    private static final int MAX_TECNOLOGIAS = 55;
-    private static final int MAX_ANOS = 20;
-    private static final int MAX_UBICACION = 15;
-    private static final int MAX_SALARIO = 10;
+    private static final int MAX_TECNOLOGIAS = 65;
+    private static final int MAX_UBICACION = 20;
+    private static final int MAX_SALARIO = 15;
 
     private static final Pattern INGLES_ALTO = Pattern.compile(
             "ingl[ée]s\\s*(alto|avanzado|fluido|c1|c2)|\\bc1\\b|\\bc2\\b|fluent\\s+english|"
@@ -84,13 +89,12 @@ public final class Puntuador {
         Integer anos = extractor.anosRequeridos(texto);
 
         int bruto = puntosTecnologias(pedidas, perfil)
-                + puntosAnos(anos)
                 + puntosUbicacion(oferta, perfil)
                 + puntosSalario(oferta, perfil);
 
         int encaje = descartadaPorTitulo(oferta, perfil)
                 ? 0
-                : (int) Math.round(bruto * senal.factor());
+                : (int) Math.round(bruto * accesibilidad(senal, anos));
 
         return new Analisis(
                 acotar(encaje),
@@ -137,18 +141,38 @@ public final class Puntuador {
         return (int) Math.round(MAX_TECNOLOGIAS * (numerador / denominador));
     }
 
-    /** 20 pts. */
-    int puntosAnos(Integer anos) {
+    /**
+     * Cuanta opcion real hay de entrar en esta oferta, entre 0 y 1.
+     *
+     * <p>Producto de dos factores independientes: la etiqueta de seniority y
+     * los anos pedidos. Independientes porque dicen cosas distintas y a veces
+     * se contradicen: "mid-level" con 2 anos es una puerta entornada,
+     * "mid-level" con 5 es una puerta cerrada, y la etiqueta es la misma.
+     */
+    double accesibilidad(Seniority senal, Integer anos) {
+        return senal.factor() * factorAnos(anos);
+    }
+
+    /**
+     * Los anos son el dato duro. Caen rapido a partir de tres porque a partir
+     * de ahi la oferta deja de ser alcanzable, no solo menos comoda.
+     *
+     * <p>Cuando la oferta no los dice se aplica 0.90: no se penaliza el
+     * silencio, pero tampoco se premia. Hoy es el caso mayoritario, porque
+     * Adzuna recorta la descripcion a 500 caracteres.
+     */
+    double factorAnos(Integer anos) {
         if (anos == null) {
-            return 13;
+            return 0.90;
         }
         if (anos <= 1) {
-            return MAX_ANOS;
+            return 1.00;
         }
         return switch (anos) {
-            case 2 -> 13;
-            case 3 -> 7;
-            default -> 0;
+            case 2 -> 0.92;
+            case 3 -> 0.70;
+            case 4 -> 0.40;
+            default -> 0.20;
         };
     }
 

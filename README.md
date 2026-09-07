@@ -164,34 +164,50 @@ resumen por un "se valora ingles".
 
 ## Puntuacion
 
-Cuatro bloques que suman 100, multiplicados por la seniority:
+El encaje responde a **dos preguntas distintas**, y por eso tiene dos partes:
 
 ```
-encaje = (tecnologias + anos + ubicacion + salario) x factorSeniority
+¿cuanto me gusta?      ->  suma
+¿tengo alguna opcion?  ->  multiplica
+
+encaje = (tecnologias + ubicacion + salario) x accesibilidad
 ```
 
 | Bloque | Puntos | Criterio |
 |---|---:|---|
-| Tecnologias | 55 | pesos de las pedidas que tengo / pesos de todas las pedidas, ponderado por nivel |
-| Anos requeridos | 20 | 0-1 → 20 · 2 → 13 · 3 → 7 · 4+ → 0 · no dice → 13 |
-| Ubicacion | 15 | remoto o Galicia 15 · resto de Espana 6 · extranjero 0 |
-| Salario | 10 | banda por encima del objetivo 10 · por debajo 4 · sin publicar 6 |
+| Tecnologias | 65 | pesos de las pedidas que tengo / pesos de todas las pedidas, ponderado por nivel |
+| Ubicacion | 20 | remoto o Galicia 20 · resto de Espana 6 · extranjero 0 |
+| Salario | 15 | banda por encima del objetivo 15 · por debajo 4 · sin publicar 6 |
 
-| Seniority | Factor |
-|---|---:|
-| JUNIOR | ×1.00 |
-| No lo dice | ×0.85 |
-| MID | ×0.50 |
-| SENIOR | ×0.15 |
+```
+accesibilidad = factorSeniority x factorAnos
+```
 
-**Por que la seniority multiplica y no suma.** En el diseno inicial era un bloque
-de 20 puntos. Con datos reales, una oferta de *Senior Java Software Engineer*
-sacaba **73 sobre 100** y superaba el umbral: mencionaba Java, saturaba el bloque
-de tecnologias, y los demas bloques compensaban de sobra el cero de seniority.
+| Seniority | Factor | | Anos pedidos | Factor |
+|---|---:|---|---|---:|
+| JUNIOR | ×1.00 | | 0-1 | ×1.00 |
+| No lo dice | ×0.92 | | 2 | ×0.92 |
+| MID | ×0.75 | | 3 | ×0.70 |
+| SENIOR | ×0.18 | | 4 | ×0.40 |
+| | | | 5+ | ×0.20 |
+| | | | no lo dice | ×0.90 |
+
+**Por que la accesibilidad multiplica y no suma.** En el diseno inicial la
+seniority era un bloque de 20 puntos. Con datos reales, una oferta de *Senior
+Java Software Engineer* sacaba **73 sobre 100** y superaba el umbral: mencionaba
+Java, saturaba el bloque de tecnologias, y los demas bloques compensaban de
+sobra el cero de seniority.
 
 Cualquier bloque que suma se puede compensar. Y una oferta senior no es una
-oferta un poco peor para un junior: es una oferta que no sirve. Por eso
-multiplica.
+oferta un poco peor para un junior: es una oferta que no sirve.
+
+**Por que los anos van en el multiplicador y no en un bloque.** Porque la
+etiqueta de seniority es un *proxy* de los anos, y a veces se contradicen:
+*"mid-level"* con 2 anos es una puerta entornada y *"mid-level"* con 5 es una
+puerta cerrada, pero la etiqueta es la misma. Cuando la oferta dice los anos,
+mandan los anos. Asi una MID de dos anos con encaje excepcional puede entrar
+(0.75 × 0.92 = 0.69) y una de cuatro no entra ni siendo perfecta
+(0.75 × 0.40 = 0.30), sin inventar categorias intermedias en el enum.
 
 Ademas, `descartar_si_titulo_contiene` es un filtro duro y manda a cero: el
 nombre del ajuste promete descartar. Se mira solo el titulo — "reportaras al
