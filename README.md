@@ -89,11 +89,43 @@ Eso es todo: Postgres, migraciones de Flyway y la aplicacion.
 
 | | |
 |---|---|
-| API | http://localhost:8080/api/ofertas |
 | Swagger | http://localhost:8080/swagger-ui.html |
 | Health | http://localhost:8080/actuator/health |
 
-Para desarrollo en Windows, `.\build.ps1` compila y pasa los tests.
+Para desarrollo en Windows, `.\build.ps1` compila y pasa los tests, y
+`.\scripts\arrancar-local.ps1` levanta la aplicacion cargando el `.env`.
+
+### La API
+
+| | |
+|---|---|
+| `GET /api/ofertas` | filtrable por `minEncaje`, `modalidad`, `desde`, `fuente`, `limite` |
+| `GET /api/ofertas/{huella}` | una oferta con su analisis completo |
+| `POST /api/analizar` | **pega una oferta y analizala entera**, sin guardarla |
+| `GET /api/estadisticas` | tecnologias mas pedidas y salario medio por ubicacion |
+| `POST /api/recolectar` | dispara una recoleccion |
+| `POST /api/resumen` | genera y envia el resumen sin esperar al cron |
+
+Las ofertas se referencian por su **huella**, no por un id de base de datos: es
+una clave natural del dominio y evita exponer la identidad de JPA.
+
+**`POST /api/analizar` es el endpoint que importa.** Es el modo *"pegame esta
+oferta que acabo de ver"*, y es la respuesta practica a que Adzuna recorte las
+descripciones: para las ofertas que de verdad interesan, el texto entero lo trae
+una persona. Acepta HTML y no guarda nada.
+
+```bash
+curl -X POST localhost:8080/api/analizar -H 'Content-Type: application/json' \
+  -d '{"titulo":"Desarrollador Backend Junior","texto":"<p>Java 21 y Spring Boot...</p>"}'
+```
+
+```json
+{ "analisis": { "encaje": 69, "senal": "JUNIOR", "anosRequeridos": 1,
+                "tecnologiasPedidas": ["Java","Spring Boot","PostgreSQL","Docker"],
+                "banderasRojas": ["pide ingles alto (tu nivel: B1)"] },
+  "modalidad": "HIBRIDO",
+  "aviso": "Sin ubicacion ni salario, esos bloques puntuan en neutro..." }
+```
 
 ---
 
@@ -135,6 +167,23 @@ liston mas bajo.
 
 Cuando el stack no es el tuyo, se dice: *"Stack que no tienes: PHP"*. La maquina
 informa, la persona decide.
+
+**Los dias en blanco tambien llegan.** Si no entra nada, el mensaje lo dice y
+ensena lo mas alto que hubo:
+
+```
+RedTrack - hoy nada supera el umbral.
+Revisadas 13 ofertas nuevas.
+
+Lo mas alto que hubo:
+· [38%] Software Engineer - Mscope
+· [31%] Full Stack Java-React - Minsait (banda salarial de puesto no junior)
+```
+
+Un resumen que no llega es **indistinguible de un sistema caido**, y a los tres
+dias de silencio dejarias de fiarte de la herramienta. Esto no baja el umbral:
+solo cambia lo que se cuenta. Solo se calla cuando no hubo ni una oferta nueva
+que evaluar.
 
 ---
 
@@ -291,11 +340,53 @@ codigo, para ajustar pesos y umbral sin recompilar.
 
 ---
 
+## Lo que enseñaron los datos reales
+
+Tres fallos de diseno que los tests no podian ver, porque no eran fallos de
+logica sino suposiciones equivocadas sobre como son las ofertas de verdad. Los
+tres aparecieron al ejecutar el sistema contra las APIs reales, y los tres
+tienen ya su test de regresion.
+
+**1. Las ofertas senior superaban el umbral.** Una *Senior Java Software
+Engineer* sacaba 73 sobre 100: mencionaba Java, saturaba el bloque de
+tecnologias, y los demas bloques compensaban de sobra el cero de seniority. De
+ahi que la accesibilidad pasara a multiplicar en vez de sumar.
+
+**2. Exigir una tecnologia que no tienes salia gratis.** El denominador del
+bloque de tecnologias es la suma de pesos, y las que no se tienen estaban
+declaradas con `peso: 0`. Una oferta podia pedir Angular, .NET y Kafka sin que
+la nota bajase un punto. El fondo era conceptual: `nivel` y `peso` son ejes
+distintos y se estaban mezclando.
+
+**3. Un puesto de soporte a cliente entro en "para ti".** *"SaaS Product Support
+Jedi"* saco 61 porque menciona JavaScript, es remota y pide 2 anos. El filtro de
+"esto parece desarrollo" estaba solo en la segunda seccion. Citar una tecnologia
+que tienes no convierte una oferta en una oferta de programador.
+
+Y una cuarta que no era un fallo sino un techo: **Adzuna recorta las
+descripciones a 500 caracteres**. Medido en la misma recoleccion contra las dos
+fuentes:
+
+| | descripcion media | con anos detectados |
+|---|---:|---:|
+| Adzuna | 499 car. | 2 de 19 — **11%** |
+| Remotive | 4.255 car. | 11 de 14 — **79%** |
+
+Las expresiones regulares de extraccion estaban bien desde el principio. El
+problema era el acceso al texto, no la logica — y por eso tampoco lo habria
+resuelto un modelo de IA.
+
+---
+
 ## Stack
 
 Java 21 · Spring Boot 3.4 · **Maven** · Spring Data JPA · PostgreSQL 16 ·
 Flyway · Spring RestClient · Jackson · MapStruct · commons-text (Jaro-Winkler) ·
 springdoc-openapi · Docker · GitHub Actions · Ollama (opcional)
+
+**Fuentes:** [Adzuna](https://developer.adzuna.com) (Espana, con salarios) y
+[Remotive](https://remotive.com/api-documentation) (remoto, con la descripcion
+completa). Ambas son APIs publicas y gratuitas.
 
 **Tests:** JUnit 5 · AssertJ · **WireMock** · Testcontainers · JaCoCo
 

@@ -1,5 +1,6 @@
 package com.miguelalvarez.redtrack.configuracion;
 
+import com.miguelalvarez.redtrack.aplicacion.AnalizarTextoUseCase;
 import com.miguelalvarez.redtrack.aplicacion.GenerarResumenDiarioUseCase;
 import com.miguelalvarez.redtrack.aplicacion.RecolectarOfertasUseCase;
 import com.miguelalvarez.redtrack.dominio.puerto.AnalizadorSemantico;
@@ -83,6 +84,12 @@ public class NucleoConfiguracion {
                                                AnalizadorSemantico analizador) {
         return new RecolectarOfertasUseCase(
                 fuentes, repositorio, normalizador, deduplicador, puntuador, analizador);
+    }
+
+    @Bean
+    AnalizarTextoUseCase analizarTexto(Puntuador puntuador, ExtractorSenales extractor,
+                                       Normalizador normalizador) {
+        return new AnalizarTextoUseCase(puntuador, extractor, normalizador);
     }
 
     @Bean

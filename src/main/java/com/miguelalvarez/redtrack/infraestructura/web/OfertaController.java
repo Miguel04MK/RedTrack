@@ -1,14 +1,20 @@
 package com.miguelalvarez.redtrack.infraestructura.web;
 
+import com.miguelalvarez.redtrack.aplicacion.AnalizarTextoUseCase;
 import com.miguelalvarez.redtrack.aplicacion.GenerarResumenDiarioUseCase;
 import com.miguelalvarez.redtrack.aplicacion.RecolectarOfertasUseCase;
+import com.miguelalvarez.redtrack.dominio.modelo.FiltroOfertas;
 import com.miguelalvarez.redtrack.dominio.modelo.Modalidad;
 import com.miguelalvarez.redtrack.dominio.modelo.OfertaAnalizada;
 import com.miguelalvarez.redtrack.dominio.modelo.Perfil;
 import com.miguelalvarez.redtrack.dominio.modelo.ResumenDiario;
+import com.miguelalvarez.redtrack.dominio.puerto.ConsultaDeOfertas;
 import com.miguelalvarez.redtrack.infraestructura.planificacion.TareaDiaria;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +31,12 @@ import java.util.List;
  * API pequena, para poder ensenar el proyecto en directo.
  *
  * <p>El endpoint que importa es {@code POST /api/analizar}: es el modo
- * "pegame esta oferta que acabo de ver en InfoJobs". Sigue siendo util aunque
- * esa fuente no este integrada, y es lo que se ensena en una entrevista.
+ * "pegame esta oferta que acabo de ver". Sigue siendo util aunque esa fuente no
+ * este integrada, y es la respuesta practica a que Adzuna recorte las
+ * descripciones a 500 caracteres.
+ *
+ * <p>Las ofertas se referencian por su HUELLA, no por un id de base de datos:
+ * es una clave natural del dominio y evita exponer la identidad de JPA.
  *
  * <p>Documentacion en /swagger-ui.html
  */
@@ -35,15 +45,21 @@ import java.util.List;
 @Tag(name = "Ofertas", description = "Consulta y analisis de ofertas")
 public class OfertaController {
 
+    private final ConsultaDeOfertas consulta;
+    private final AnalizarTextoUseCase analizarTexto;
     private final RecolectarOfertasUseCase recolectar;
     private final GenerarResumenDiarioUseCase generarResumen;
     private final TareaDiaria tareaDiaria;
     private final Perfil perfil;
 
-    public OfertaController(RecolectarOfertasUseCase recolectar,
+    public OfertaController(ConsultaDeOfertas consulta,
+                            AnalizarTextoUseCase analizarTexto,
+                            RecolectarOfertasUseCase recolectar,
                             GenerarResumenDiarioUseCase generarResumen,
                             TareaDiaria tareaDiaria,
                             Perfil perfil) {
+        this.consulta = consulta;
+        this.analizarTexto = analizarTexto;
         this.recolectar = recolectar;
         this.generarResumen = generarResumen;
         this.tareaDiaria = tareaDiaria;
@@ -51,37 +67,48 @@ public class OfertaController {
     }
 
     @GetMapping("/ofertas")
-    @Operation(summary = "Ofertas guardadas, filtrables por encaje, modalidad y fecha")
+    @Operation(summary = "Ofertas guardadas, de mayor a menor encaje")
     public List<OfertaAnalizada> listar(
-            @RequestParam(defaultValue = "0") int minEncaje,
+            @Parameter(description = "Encaje minimo, 0-100")
+            @RequestParam(required = false) Integer minEncaje,
             @RequestParam(required = false) Modalidad modalidad,
-            @RequestParam(required = false) LocalDate desde) {
-        // TODO(fase-3): consulta con Specification sobre OfertaJpaRepository.
-        throw new UnsupportedOperationException("TODO(fase-3): GET /api/ofertas");
+            @Parameter(description = "Publicadas a partir de esta fecha")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @Parameter(description = "adzuna, remotive...")
+            @RequestParam(required = false) String fuente,
+            @Parameter(description = "Maximo 200")
+            @RequestParam(defaultValue = "50") int limite) {
+
+        return consulta.buscar(
+                new FiltroOfertas(minEncaje, modalidad, desde, fuente, limite));
     }
 
-    @GetMapping("/ofertas/{id}")
-    @Operation(summary = "Una oferta con su analisis completo")
-    public ResponseEntity<OfertaAnalizada> porId(@PathVariable Long id) {
-        // TODO(fase-3)
-        throw new UnsupportedOperationException("TODO(fase-3): GET /api/ofertas/{id}");
+    @GetMapping("/ofertas/{huella}")
+    @Operation(summary = "Una oferta con su analisis completo, por su huella")
+    public ResponseEntity<OfertaAnalizada> porHuella(@PathVariable String huella) {
+        return consulta.porHuella(huella)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Analiza una oferta pegada a mano, sin guardarla.
+     *
+     * <p>Es lo que se ensena en directo, y lo que permite analizar entera una
+     * oferta de un portal que no se puede integrar por sus terminos de uso.
+     */
     @PostMapping("/analizar")
     @Operation(summary = "Analiza un texto de oferta pegado a mano, sin guardarlo")
-    public AnalisisRespuesta analizar(@RequestBody AnalizarPeticion peticion) {
-        // TODO(fase-2): construir una Oferta sintetica con el texto y pasarla
-        //               por el Puntuador. No toca base de datos.
-        throw new UnsupportedOperationException("TODO(fase-2): POST /api/analizar");
+    public AnalizarTextoUseCase.Resultado analizar(@RequestBody AnalizarPeticion peticion) {
+        return analizarTexto.ejecutar(peticion.titulo(), peticion.texto(), perfil);
     }
 
     @GetMapping("/estadisticas")
-    @Operation(summary = "Agregados por tecnologia y salario")
-    public EstadisticasRespuesta estadisticas() {
-        // TODO(fase-4): alimenta los dos graficos del README:
-        //   - las 15 tecnologias mas pedidas en ofertas junior
-        //   - salario medio junior por provincia
-        throw new UnsupportedOperationException("TODO(fase-4): GET /api/estadisticas");
+    @Operation(summary = "Tecnologias mas pedidas y salario medio por ubicacion")
+    public ConsultaDeOfertas.Estadisticas estadisticas(
+            @RequestParam(defaultValue = "15") int topTecnologias) {
+        return consulta.estadisticas(topTecnologias);
     }
 
     @PostMapping("/recolectar")
@@ -94,8 +121,8 @@ public class OfertaController {
     /**
      * Genera y ENVIA el resumen ahora, sin esperar al cron de las 8:00.
      *
-     * <p>Es lo que se ensena en directo, y lo que evita tener que esperar a
-     * manana para comprobar un cambio en la clasificacion.
+     * <p>Evita tener que esperar a manana para comprobar un cambio en la
+     * clasificacion.
      */
     @PostMapping("/resumen")
     @Operation(summary = "Genera y envia el resumen diario ahora mismo")
@@ -103,19 +130,10 @@ public class OfertaController {
         return generarResumen.ejecutar(perfil);
     }
 
-    public record AnalizarPeticion(String texto) {
-    }
-
-    public record AnalisisRespuesta(int encaje, List<String> pide, List<String> teFalta,
-                                    List<String> avisos) {
-    }
-
-    public record EstadisticasRespuesta(List<ConteoTecnologia> tecnologias,
-                                        List<SalarioPorProvincia> salarios) {
-        public record ConteoTecnologia(String tecnologia, long ofertas) {
-        }
-
-        public record SalarioPorProvincia(String provincia, int salarioMedio, long ofertas) {
-        }
+    /**
+     * @param titulo opcional, pero conviene: la seniority y el filtro de titulos
+     *               vetados solo miran ahi
+     */
+    public record AnalizarPeticion(String titulo, @NotBlank String texto) {
     }
 }
