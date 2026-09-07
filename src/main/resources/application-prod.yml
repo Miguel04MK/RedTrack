@@ -1,0 +1,24 @@
+# ============================================================
+#  Perfil prod: EC2 t2.micro dentro de la capa gratuita de AWS
+# ============================================================
+
+logging:
+  level:
+    com.miguelalvarez.redtrack: INFO
+    org.hibernate.SQL: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Solo health: es lo que usa el healthcheck de Docker.
+        include: health
+
+redtrack:
+  ia:
+    # DESACTIVADA, y no es un olvido.
+    #
+    # Una t2.micro tiene 1 GB de RAM: no mueve Llama 3. El sistema funciona
+    # completo sin el modelo, asi que aqui simplemente se apaga y el
+    # NuloAnalizador ocupa su sitio.
+    activa: false

@@ -1,0 +1,73 @@
+package com.miguelalvarez.redtrack.configuracion;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
+import java.util.List;
+
+/**
+ * Configuracion del servicio, bajo el prefijo {@code redtrack} en application.yml.
+ *
+ * <p>Los secretos (claves de Adzuna, token de Telegram) llegan por variable de
+ * entorno; aqui solo se declaran los nombres. Nunca se escriben valores reales
+ * en el yml.
+ */
+@ConfigurationProperties(prefix = "redtrack")
+public record RedTrackProperties(
+        Busquedas busquedas,
+        Adzuna adzuna,
+        Remotive remotive,
+        Telegram telegram,
+        Ia ia
+) {
+
+    /** Que se busca y con que frecuencia. */
+    public record Busquedas(
+            List<String> terminos,
+            List<String> ubicaciones,
+            int maxDiasAntiguedad,
+            int maxResultadosPorFuente
+    ) {
+    }
+
+    public record Adzuna(
+            boolean activa,
+            String url,
+            String pais,
+            String appId,
+            String appKey
+    ) {
+    }
+
+    public record Remotive(
+            boolean activa,
+            String url,
+            String categoria
+    ) {
+    }
+
+    public record Telegram(
+            boolean activo,
+            String url,
+            String botToken,
+            String chatId
+    ) {
+    }
+
+    /**
+     * IA local, opcional.
+     *
+     * <p>En perfil {@code prod} va SIEMPRE desactivada: una t2.micro tiene 1 GB
+     * de RAM y no mueve el modelo.
+     *
+     * @param timeout corto a proposito. Con 30 ofertas, un timeout largo hace
+     *                que la tarea diaria no termine nunca.
+     */
+    public record Ia(
+            boolean activa,
+            String url,
+            String modelo,
+            Duration timeout
+    ) {
+    }
+}
