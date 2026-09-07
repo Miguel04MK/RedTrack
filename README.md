@@ -1,6 +1,7 @@
-> **Estado: en construccion.** El esqueleto y el nucleo estan en pie; los
-> adaptadores marcados con `TODO(fase-N)` aun no. Este README describe el
-> proyecto terminado y sirve de guia de lo que falta.
+> **Estado: funciona de punta a punta**, con dos fuentes reales, base de datos y
+> avisos por Telegram. Falta el despliegue: hoy el resumen diario solo sale si el
+> servicio esta levantado. Lo pendiente esta marcado en el codigo como
+> `TODO(fase-N)` y resumido en [limitaciones conocidas](#limitaciones-conocidas).
 
 # RedTrack
 
