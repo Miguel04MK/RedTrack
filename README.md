@@ -4,6 +4,11 @@
 
 # RedTrack
 
+[![CI](https://github.com/Miguel04MK/RedTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Miguel04MK/RedTrack/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)
+
 Cada manana consulta varias APIs publicas de empleo, normaliza las ofertas a un
 modelo comun, elimina duplicados, puntua cuanto encaja cada una con mi perfil, y
 me manda por Telegram solo las nuevas que superan mi umbral.
@@ -215,4 +220,5 @@ claves y sin depender de que Adzuna este arriba.
 
 ## Licencia
 
-<!-- TODO: elegir licencia -->
+[MIT](LICENSE). Usalo, copialo y modificalo con libertad; solo mantén el aviso
+de copyright.
