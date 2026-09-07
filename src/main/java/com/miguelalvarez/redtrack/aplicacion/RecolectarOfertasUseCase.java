@@ -87,9 +87,14 @@ public class RecolectarOfertasUseCase {
                     Optional<Oferta> canonica = buscarCanonica(oferta);
                     if (canonica.isPresent()) {
                         duplicadas++;
-                        // TODO(fase-3): recuperar el id de la canonica y llamar a
-                        //               repositorio.registrarAparicion(...) para
-                        //               alimentar la tabla oferta_fuente.
+                        // No es basura: que la misma oferta este en varios sitios
+                        // es informacion, y en el resumen se muestra como
+                        // "vista en Adzuna y Remotive".
+                        repositorio.registrarAparicion(
+                                canonica.get().huella(),
+                                oferta.fuente(),
+                                oferta.idExterno(),
+                                oferta.url());
                         continue;
                     }
 
