@@ -9,7 +9,7 @@ import com.miguelalvarez.redtrack.dominio.modelo.OfertaAnalizada;
 import com.miguelalvarez.redtrack.dominio.modelo.Perfil;
 import com.miguelalvarez.redtrack.dominio.modelo.ResumenDiario;
 import com.miguelalvarez.redtrack.dominio.puerto.ConsultaDeOfertas;
-import com.miguelalvarez.redtrack.infraestructura.planificacion.TareaDiaria;
+import com.miguelalvarez.redtrack.infraestructura.planificacion.CriteriosDeBusqueda;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,20 +49,20 @@ public class OfertaController {
     private final AnalizarTextoUseCase analizarTexto;
     private final RecolectarOfertasUseCase recolectar;
     private final GenerarResumenDiarioUseCase generarResumen;
-    private final TareaDiaria tareaDiaria;
+    private final CriteriosDeBusqueda criterios;
     private final Perfil perfil;
 
     public OfertaController(ConsultaDeOfertas consulta,
                             AnalizarTextoUseCase analizarTexto,
                             RecolectarOfertasUseCase recolectar,
                             GenerarResumenDiarioUseCase generarResumen,
-                            TareaDiaria tareaDiaria,
+                            CriteriosDeBusqueda criterios,
                             Perfil perfil) {
         this.consulta = consulta;
         this.analizarTexto = analizarTexto;
         this.recolectar = recolectar;
         this.generarResumen = generarResumen;
-        this.tareaDiaria = tareaDiaria;
+        this.criterios = criterios;
         this.perfil = perfil;
     }
 
@@ -114,8 +114,7 @@ public class OfertaController {
     @PostMapping("/recolectar")
     @Operation(summary = "Dispara una recoleccion manual")
     public RecolectarOfertasUseCase.Resultado recolectarAhora() {
-        // TODO(fase-4): proteger este endpoint antes de exponerlo en AWS.
-        return recolectar.ejecutar(tareaDiaria.criterios(), perfil);
+        return recolectar.ejecutar(criterios.todos(), perfil);
     }
 
     /**

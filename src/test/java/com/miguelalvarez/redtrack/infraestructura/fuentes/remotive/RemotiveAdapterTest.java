@@ -45,7 +45,7 @@ class RemotiveAdapterTest {
                         new RedTrackProperties.Remotive(
                                 true, "http://localhost:" + servidor.port(),
                                 "software-dev", 1.08),
-                        null, null),
+                        null, null, null),
                 RestClient.builder(),
                 new Normalizador());
     }
