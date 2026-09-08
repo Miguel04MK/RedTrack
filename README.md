@@ -408,6 +408,13 @@ claves y sin depender de que Adzuna este arriba.
   botella es el acceso al texto, no la capacidad de analizarlo, y seguir el
   `redirect_url` para leer el anuncio entero seria scraping. Se arregla con
   fuentes que devuelvan la descripcion completa.
+- **No cubre InfoJobs ni LinkedIn, y no puede.** LinkedIn no permite que terceros
+  agreguen sus ofertas, y de InfoJobs no consta que Adzuna las sindique. Es la
+  consecuencia directa de no hacer scraping, y es una limitacion asumida: esto
+  no sustituye a esos portales, quita el trabajo de *leer* lo que si alcanza.
+  Para el resto esta `POST /api/analizar`, que analiza una oferta pegada a mano
+  con el texto completo — mejor material, de hecho, que el que da la API de
+  Adzuna sobre sus propias ofertas.
 - La deduplicacion **falla con ofertas de ETT** que reescriben el titulo entero.
   La huella no coincide y la similitud tampoco llega al umbral.
 - Una misma vacante **sembrada por varios municipios** genera una fila por
