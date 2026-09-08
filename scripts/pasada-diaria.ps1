@@ -38,6 +38,11 @@ function Registrar($mensaje) {
     Write-Output $linea
 }
 
+function Responde($puerto) {
+    $r = Test-NetConnection -ComputerName 127.0.0.1 -Port $puerto -WarningAction SilentlyContinue
+    return $r.TcpTestSucceeded
+}
+
 Registrar "=== arranca la pasada diaria ==="
 
 try {
@@ -54,12 +59,33 @@ try {
     $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'
 
     # --- Postgres -------------------------------------------
+    # Si no hay base de datos, se para aqui. Antes seguia y ejecutaba el jar
+    # igualmente, que acababa soltando un volcado de pila de Postgres en el
+    # log: mucho ruido para decir "no hay base de datos".
     $puerto = if ($env:POSTGRES_PUERTO_HOST) { [int]$env:POSTGRES_PUERTO_HOST } else { 5433 }
-    $vivo = Test-NetConnection -ComputerName 127.0.0.1 -Port $puerto -WarningAction SilentlyContinue
-    if (-not $vivo.TcpTestSucceeded) {
-        Registrar "Postgres no responde en $puerto, levantandolo"
+
+    if (-not (Responde $puerto)) {
+        Registrar "Postgres no responde en $puerto, intentando levantarlo"
+
+        docker info 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw ("Docker no esta arrancado. En Windows, Docker Desktop tiene que " +
+                   "estar en marcha para que exista la base de datos. " +
+                   "Actives el arranque automatico en sus ajustes, o usa un Postgres " +
+                   "instalado como servicio.")
+        }
+
         docker compose up -d postgres | Out-Null
-        Start-Sleep -Seconds 12
+
+        $intentos = 0
+        while (-not (Responde $puerto) -and $intentos -lt 15) {
+            Start-Sleep -Seconds 2
+            $intentos++
+        }
+        if (-not (Responde $puerto)) {
+            throw "Postgres sigue sin responder en $puerto despues de 30 segundos"
+        }
+        Registrar "Postgres listo"
     }
 
     # --- El jar ---------------------------------------------
