@@ -35,16 +35,20 @@ if ([string]::IsNullOrWhiteSpace($token) -or [string]::IsNullOrWhiteSpace($chatI
 }
 
 # Mismo formato que produce FormateadorTelegram, con datos de ejemplo.
+#
+# Los nombres de empresa son inventados A PROPOSITO. Esta captura acaba en
+# un README publico, y poner una banda salarial concreta junto al nombre de
+# una empresa real se lee como si fuera su oferta de verdad.
 $texto = @"
 *RedTrack* - 2 ofertas nuevas
 
-[87%] Desarrollador/a Java Junior - Coremain
+[87%] Desarrollador/a Java Junior - Empresa Ejemplo S.L.
 Santiago de Compostela · Hibrido · 21.000-25.000 EUR
 Pide: Java, Spring Boot, PostgreSQL, Docker
 Te falta: nada
 https://www.adzuna.es/land/ad/ejemplo
 
-[62%] Backend Developer - Baoss
+[62%] Backend Developer - Otra Empresa S.A.
 Madrid · Hibrido · sin salario
 Pide: Java, Kafka
 Te falta: Kafka

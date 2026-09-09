@@ -1,11 +1,7 @@
-> **Estado: funciona de punta a punta**, con dos fuentes reales, base de datos y
-> avisos por Telegram. Falta el despliegue: hoy el resumen diario solo sale si el
-> servicio esta levantado. Lo pendiente esta marcado en el codigo como
-> `TODO(fase-N)` y resumido en [limitaciones conocidas](#limitaciones-conocidas).
-
 # RedTrack
 
 [![CI](https://github.com/Miguel04MK/RedTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Miguel04MK/RedTrack/actions/workflows/ci.yml)
+[![Radar diario](https://github.com/Miguel04MK/RedTrack/actions/workflows/radar.yml/badge.svg)](https://github.com/Miguel04MK/RedTrack/actions/workflows/radar.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)
@@ -14,8 +10,14 @@ Cada manana consulta varias APIs publicas de empleo, normaliza las ofertas a un
 modelo comun, elimina duplicados, puntua cuanto encaja cada una con mi perfil, y
 me manda por Telegram solo las nuevas que superan mi umbral.
 
-<!-- TODO: captura del mensaje de Telegram. No es opcional: es lo primero que
-     mira quien abre el repo. -->
+**Esta funcionando.** Se ejecuta solo cada manana laborable, sin servidor
+encendido y sin que yo toque nada.
+
+<p align="center">
+  <img src="docs/resumen-telegram.png" alt="Resumen diario recibido por Telegram" width="480">
+  <br>
+  <em>El resumen tal y como llega. Datos de ejemplo: empresas y cifras inventadas.</em>
+</p>
 
 ---
 
@@ -23,9 +25,12 @@ me manda por Telegram solo las nuevas que superan mi umbral.
 
 Me presente a mas de treinta ofertas en tres semanas. La mayor parte del tiempo
 no se me iba en escribir candidaturas: se me iba en **leer anuncios que no
-encajaban**. Los buscadores de los portales filtran mal — InfoJobs empareja mi
-"C" con ofertas de "C++" — y no hay forma de decirles "avisame solo de lo que de
-verdad me sirve".
+encajaban**.
+
+Los buscadores de los portales filtran mal. El caso que me hizo empezar esto: al
+poner "C" entre mis tecnologias, un portal empezo a ofrecerme puestos de "C++",
+porque su busqueda no distingue una tecnologia de otra que la contiene. Y no hay
+forma de decirle "avisame solo de lo que de verdad me sirve".
 
 RedTrack es esa forma. Yo no vuelvo a abrir un portal: el portal viene a mi, ya
 filtrado.
@@ -48,7 +53,7 @@ flowchart TD
     P{{"FuenteDeOfertas<br/>List&lt;Oferta&gt; buscar(Criterio)"}}
 
     subgraph nucleo["Nucleo — Java puro, sin Spring ni JPA"]
-        N1[Normalizador] --> N2[Deduplicador] --> N3[Puntuador]
+        N1[Normalizador] --> N2[Deduplicador] --> N3[Puntuador] --> N4[Clasificador]
     end
 
     subgraph salidas["Salidas"]
@@ -79,24 +84,49 @@ de Jackson. Sus tests corren en milisegundos porque no levantan contexto.
 
 ---
 
-## Como levantarlo
+## Como se ejecuta
+
+**No hay servidor encendido.** El trabajo diario dura unos 30 segundos, y pagar
+una maquina las 24 horas para eso es la forma equivocada del problema.
+
+```mermaid
+flowchart LR
+    C["cron de GitHub<br/>06:23 UTC, L-V"] --> W["Workflow<br/>compila y ejecuta"]
+    W --> A["perfil una-pasada<br/>arranca · recolecta · avisa · termina"]
+    A --> D[("Postgres gestionado")]
+    A --> T["Telegram"]
+```
+
+El perfil `una-pasada` arranca la aplicacion sin servidor web ni planificador,
+hace el trabajo y **se muere**. El nucleo no se entera: mismos casos de uso,
+mismos puertos, mismos adaptadores. Lo unico que cambia es quien dispara — antes
+un `@Scheduled`, ahora un `ApplicationRunner`. Eso es exactamente lo que compra
+la arquitectura de puertos y adaptadores.
+
+El codigo de salida refleja si fue bien, asi que el workflow se pone **en rojo**
+cuando el radar falla. Sin eso, un fallo cuyo unico sintoma es *"no me llego un
+mensaje"* seria invisible.
+
+### En local
 
 ```bash
 cp .env.example .env    # y rellenar las claves
 docker compose up -d
 ```
 
-Eso es todo: Postgres, migraciones de Flyway y la aplicacion.
+Postgres, migraciones de Flyway y la aplicacion, con un comando.
 
 | | |
 |---|---|
 | Swagger | http://localhost:8080/swagger-ui.html |
 | Health | http://localhost:8080/actuator/health |
 
-Para desarrollo en Windows, `.\build.ps1` compila y pasa los tests, y
+En Windows, `.\build.ps1` compila y pasa los tests, y
 `.\scripts\arrancar-local.ps1` levanta la aplicacion cargando el `.env`.
 
-### La API
+---
+
+## La API
 
 | | |
 |---|---|
@@ -104,16 +134,23 @@ Para desarrollo en Windows, `.\build.ps1` compila y pasa los tests, y
 | `GET /api/ofertas/{huella}` | una oferta con su analisis completo |
 | `POST /api/analizar` | **pega una oferta y analizala entera**, sin guardarla |
 | `GET /api/estadisticas` | tecnologias mas pedidas y salario medio por ubicacion |
-| `POST /api/recolectar` | dispara una recoleccion |
-| `POST /api/resumen` | genera y envia el resumen sin esperar al cron |
+| `POST /api/recolectar` | dispara una recoleccion · **protegido** |
+| `POST /api/resumen` | genera y envia el resumen · **protegido** |
 
 Las ofertas se referencian por su **huella**, no por un id de base de datos: es
 una clave natural del dominio y evita exponer la identidad de JPA.
 
-**`POST /api/analizar` es el endpoint que importa.** Es el modo *"pegame esta
-oferta que acabo de ver"*, y es la respuesta practica a que Adzuna recorte las
-descripciones: para las ofertas que de verdad interesan, el texto entero lo trae
-una persona. Acepta HTML y no guarda nada.
+Los dos endpoints que *hacen* cosas van tras un token en cabecera: uno gasta
+cuota de la API externa y el otro hace que el bot escriba. Y **fallan cerrado**:
+sin token configurado devuelven 503 en vez de quedar abiertos, porque un
+despliegue al que se le olvida una variable tiene que romperse de forma evidente,
+no quedarse en barra libre.
+
+### `POST /api/analizar` es el endpoint que importa
+
+Es el modo *"pegame esta oferta que acabo de ver"*, y es la respuesta practica a
+que la fuente principal recorte las descripciones: para las ofertas que de verdad
+interesan, el texto entero lo trae una persona. Acepta HTML y no guarda nada.
 
 ```bash
 curl -X POST localhost:8080/api/analizar -H 'Content-Type: application/json' \
@@ -132,16 +169,16 @@ curl -X POST localhost:8080/api/analizar -H 'Content-Type: application/json' \
 
 ## El resumen diario
 
-Un mensaje cada manana laborable a las 8:00, con **dos secciones que responden a
-preguntas distintas**:
+Un mensaje cada manana laborable, con **dos secciones que responden a preguntas
+distintas**:
 
 ```
-RedTrack - 1 para ti · 3 podrian interesarte
+RedTrack - 1 para ti · 1 podrian interesarte
 
 PARA TI
 
-[87%] Desarrollador Java Junior - Coremain
-Santiago · Hibrido · 21.000-25.000 EUR
+[87%] Desarrollador Java Junior - Empresa Ejemplo S.L.
+Ciudad · Hibrido · 21.000-25.000 EUR
 Pide: Java, Spring Boot, PostgreSQL
 Te falta: nada
 https://...
@@ -149,8 +186,9 @@ https://...
 PODRIAN INTERESARTE
 Junior de desarrollo, aunque no sea tu stack.
 
-[22%] Fullstack Developer - 25.000 Al Ano - Remoto - Landra Sistemas
-Galicia · Remoto · 25.000 EUR
+[22%] Fullstack Developer - Otra Empresa S.A.
+Remoto · 25.000 EUR
+Stack que no tienes: PHP
 https://...
 ```
 
@@ -158,8 +196,9 @@ https://...
 
 **Podrian interesarte** son puestos junior de desarrollo del stack que sea.
 Existe porque el mercado junior de una tecnologia concreta se seca semanas
-enteras — en una semana real, Adzuna no tenia **ni una** oferta junior de Java en
-Galicia — y **un resumen que nunca llega es indistinguible de un resumen roto**.
+enteras — en una semana medida, la fuente principal no tenia **ni una** oferta
+junior de Java en la provincia buscada — y **un resumen que nunca llega es
+indistinguible de un resumen roto**.
 
 La segunda seccion **no baja el liston** de lo que el sistema considera bueno:
 responde a otra pregunta. Por eso ignora el encaje por completo y solo mira si el
@@ -177,8 +216,8 @@ RedTrack - hoy nada supera el umbral.
 Revisadas 13 ofertas nuevas.
 
 Lo mas alto que hubo:
-· [38%] Software Engineer - Mscope
-· [31%] Full Stack Java-React - Minsait (banda salarial de puesto no junior)
+· [38%] Software Engineer - Empresa Ejemplo S.L.
+· [31%] Full Stack Developer - Otra Empresa S.A. (banda salarial de puesto no junior)
 ```
 
 Un resumen que no llega es **indistinguible de un sistema caido**, y a los tres
@@ -192,29 +231,45 @@ que evaluar.
 
 ### No hay scraping, y es a proposito
 
-No se raspa InfoJobs, LinkedIn ni Tecnoempleo. Tres razones:
+No se raspa ningun portal de empleo. Tres razones:
 
 1. Sus terminos de uso lo prohiben expresamente.
-2. Este repositorio es publico. Un scraper de InfoJobs en el portfolio de alguien
-   que se inscribe por InfoJobs es un mal cuadro.
-3. Tecnicamente es una cinta de correr: Cloudflare, limites de peticiones, render
-   dinamico, muros de login y selectores que se rompen cada semana.
+2. Este repositorio es publico. Un scraper de un portal en el portfolio de
+   alguien que se inscribe por ese mismo portal es un mal cuadro.
+3. Tecnicamente es una cinta de correr: proteccion anti-bots, limites de
+   peticiones, render dinamico, muros de login y selectores que se rompen cada
+   semana.
 
 Se usan **APIs publicas y feeds RSS que existen para esto**. Y ademas es mas
-interesante: integrar cinco esquemas distintos y unificarlos es un problema de
-verdad; raspar HTML no lo es.
+interesante: integrar esquemas distintos y unificarlos es un problema de verdad;
+raspar HTML no lo es.
+
+### Ejecutar sin servidor, y no en una maquina encendida
+
+El plan inicial era una instancia pequena en la nube con el servicio arrancado
+todo el dia. Al medirlo, el trabajo diario resulto durar **unos 30 segundos**.
+
+Pagar —o mantener— una maquina 24 horas para 30 segundos de trabajo es la forma
+equivocada del problema. Un workflow programado hace lo mismo, gratis y sin nada
+que administrar.
+
+El precio a pagar, dicho claro: **no hay API publica accesible**. Para ensenar el
+Swagger hay que levantarlo en local. A cambio, no hay servidor que parchear,
+ni puertos que exponer, ni maquina que se quede encendida por olvido.
 
 ### Puertos y adaptadores porque las fuentes son intercambiables
 
 Anadir una fuente es implementar `FuenteDeOfertas` y registrar el bean. El nucleo
 no se toca. Si una fuente cae, devuelve lista vacia y las demas siguen.
 
+La segunda fuente lo demostro: entro entera sin tocar ni un caso de uso, y el
+modo de ejecucion sin servidor tampoco toco el nucleo.
+
 ### La deteccion de tecnologias usa limites de palabra reales
 
 `"Java"` no casa dentro de `"JavaScript"`. `"C"` no casa dentro de `"C++"` ni
 `"C#"`. `"Go"` no casa dentro de `"Google"`. Hay **un test por cada caso**, y
-estan escritos precisamente porque es el bug que si tiene el buscador de un
-portal real.
+estan escritos precisamente porque es el bug que empuja a construir esto.
 
 ### La deduplicacion es en dos pasos, con una salvaguarda
 
@@ -236,31 +291,32 @@ resumen; si no, se degrada silenciosamente. **Una dependencia externa opcional n
 debe poder tumbar el servicio.**
 
 Implementado con dos beans: `OllamaAnalizador` bajo
-`@ConditionalOnProperty(radar.ia.activa=true)` y `NuloAnalizador` bajo
+`@ConditionalOnProperty(redtrack.ia.activa=true)` y `NuloAnalizador` bajo
 `@ConditionalOnMissingBean`. Timeout de 5 segundos: con 30 ofertas, un timeout
 largo hace que la tarea diaria no termine nunca.
 
 ### Los terminos de busqueda son el filtro de categoria
 
 Para la seccion "podrian interesarte" hay que buscar puestos junior de cualquier
-stack, y ahi Adzuna devuelve *Junior Territory Manager*, *Comercial Tecnico
-Junior* y *Practicas RRHH*.
+stack, y ahi la API devuelve *Junior Territory Manager*, *Comercial Tecnico
+Junior* y *Practicas de RRHH*.
 
-Lo evidente seria filtrar con el parametro `category=it-jobs`, y **funciona** —
-pero es una trampa: **13 de cada 17 ofertas de informatica reales llegan con
-`category: unknown`**, asi que filtrar por categoria tira el 76% de las buenas.
-Precision alta, recall pesimo.
+Lo evidente seria filtrar por la categoria que la propia API asigna, y
+**funciona** — pero es una trampa: **13 de cada 17 ofertas de informatica reales
+llegan sin categoria asignada**, asi que filtrar por ella tira el 76% de las
+buenas. Precision alta, recall pesimo.
 
 El filtro acaba siendo doble: terminos de busqueda especificos
 (`desarrollador junior`, no `junior`) y una comprobacion del titulo con terminos
 solo positivos. Nada tan generico como *"tecnico"*, que es el que arrastra la
-mayor parte del ruido. Los tests usan titulos reales devueltos por la API,
-odontologos incluidos.
+mayor parte del ruido.
 
-### Postgres en la instancia, no RDS
+### El perfil publicado es un ejemplo
 
-RDS es gratis 750 horas el primer ano y luego cuesta. Para este volumen de datos
-no aporta nada frente a un contenedor con un volumen persistente en la misma EC2.
+[`perfil.yaml`](src/main/resources/perfil.yaml) documenta el formato y permite
+que el proyecto arranque nada mas clonarlo, pero sus preferencias son
+ilustrativas. El real se apunta con `REDTRACK_PERFIL_RUTA` y no se publica: quien
+conoce tu suelo salarial antes de sentarse a negociar tiene ventaja.
 
 ### Las banderas rojas informan, no restan
 
@@ -284,7 +340,7 @@ encaje = (tecnologias + ubicacion + salario) x accesibilidad
 | Bloque | Puntos | Criterio |
 |---|---:|---|
 | Tecnologias | 65 | pesos de las pedidas que tengo / pesos de todas las pedidas, ponderado por nivel |
-| Ubicacion | 20 | remoto o Galicia 20 · resto de Espana 6 · extranjero 0 |
+| Ubicacion | 20 | remoto o zona deseada 20 · resto del pais 6 · extranjero 0 |
 | Salario | 15 | banda por encima del objetivo 15 · por debajo 4 · sin publicar 6 |
 
 ```
@@ -300,26 +356,10 @@ accesibilidad = factorSeniority x factorAnos x factorSalario
 | | | | 5+ | ×0.20 | | no publica | ×1.00 |
 | | | | no lo dice | ×0.90 | | | |
 
-**Por que el salario esta en los dos lados.** No es un error: son dos preguntas
-distintas sobre el mismo dato. Que una oferta pague 60.000 responde *"si"* a
-cuanto me gusta y *"no"* a si puedo optar.
-
-El caso que lo motivo: Minsait publico *"Full Stack Java-React"* con banda
-60.000-90.000 y sin la palabra *senior* en el titulo, y *"Senior Full-Stack
-Engineer"* con la banda **identica**. Mismo puesto, distinto titular. Sin esta
-senal, la primera era la unica oferta que superaba el umbral — el resumen tenia
-un 100% de falsos positivos.
-
-Un sueldo muy por encima del objetivo no es una buena noticia para un junior:
-es la prueba de que la oferta no es para el. Es un dato de seniority disfrazado
-de dato de compensacion. Es un proxy parcial (solo 3 de cada 15 ofertas publican
-banda) y no penaliza el silencio.
-
 **Por que la accesibilidad multiplica y no suma.** En el diseno inicial la
-seniority era un bloque de 20 puntos. Con datos reales, una oferta de *Senior
-Java Software Engineer* sacaba **73 sobre 100** y superaba el umbral: mencionaba
-Java, saturaba el bloque de tecnologias, y los demas bloques compensaban de
-sobra el cero de seniority.
+seniority era un bloque de 20 puntos. Con datos reales, una oferta senior sacaba
+**73 sobre 100** y superaba el umbral: mencionaba Java, saturaba el bloque de
+tecnologias, y los demas bloques compensaban de sobra el cero de seniority.
 
 Cualquier bloque que suma se puede compensar. Y una oferta senior no es una
 oferta un poco peor para un junior: es una oferta que no sirve.
@@ -332,26 +372,32 @@ mandan los anos. Asi una MID de dos anos con encaje excepcional puede entrar
 (0.75 × 0.92 = 0.69) y una de cuatro no entra ni siendo perfecta
 (0.75 × 0.40 = 0.30), sin inventar categorias intermedias en el enum.
 
+**Por que el salario esta en los dos lados.** No es un error: son dos preguntas
+distintas sobre el mismo dato. Que una oferta pague el triple del objetivo
+responde *"si"* a cuanto me gusta y *"no"* a si puedo optar.
+
+Un sueldo muy por encima del objetivo no es una buena noticia para un junior: es
+la prueba de que la oferta no es para el. Es un dato de seniority disfrazado de
+dato de compensacion. Es un proxy parcial —solo 3 de cada 15 ofertas publican
+banda— y no penaliza el silencio.
+
 Ademas, `descartar_si_titulo_contiene` es un filtro duro y manda a cero: el
 nombre del ajuste promete descartar. Se mira solo el titulo — "reportaras al
 arquitecto" no convierte una oferta junior en una de arquitecto.
-
-El perfil vive en [`perfil.yaml`](src/main/resources/perfil.yaml), fuera del
-codigo, para ajustar pesos y umbral sin recompilar.
 
 ---
 
 ## Lo que enseñaron los datos reales
 
-Tres fallos de diseno que los tests no podian ver, porque no eran fallos de
-logica sino suposiciones equivocadas sobre como son las ofertas de verdad. Los
-tres aparecieron al ejecutar el sistema contra las APIs reales, y los tres
-tienen ya su test de regresion.
+Cuatro fallos que los tests no podian ver, porque no eran fallos de logica sino
+suposiciones equivocadas sobre como son las ofertas de verdad. Los cuatro
+aparecieron al ejecutar el sistema contra las APIs reales, y todos tienen ya su
+test de regresion.
 
-**1. Las ofertas senior superaban el umbral.** Una *Senior Java Software
-Engineer* sacaba 73 sobre 100: mencionaba Java, saturaba el bloque de
-tecnologias, y los demas bloques compensaban de sobra el cero de seniority. De
-ahi que la accesibilidad pasara a multiplicar en vez de sumar.
+**1. Las ofertas senior superaban el umbral.** Una oferta senior sacaba 73 sobre
+100: mencionaba Java, saturaba el bloque de tecnologias, y los demas bloques
+compensaban de sobra el cero de seniority. De ahi que la accesibilidad pasara a
+multiplicar en vez de sumar.
 
 **2. Exigir una tecnologia que no tienes salia gratis.** El denominador del
 bloque de tecnologias es la suma de pesos, y las que no se tienen estaban
@@ -359,23 +405,35 @@ declaradas con `peso: 0`. Una oferta podia pedir Angular, .NET y Kafka sin que
 la nota bajase un punto. El fondo era conceptual: `nivel` y `peso` son ejes
 distintos y se estaban mezclando.
 
-**3. Un puesto de soporte a cliente entro en "para ti".** *"SaaS Product Support
-Jedi"* saco 61 porque menciona JavaScript, es remota y pide 2 anos. El filtro de
-"esto parece desarrollo" estaba solo en la segunda seccion. Citar una tecnologia
-que tienes no convierte una oferta en una oferta de programador.
+**3. Un puesto de soporte a cliente entro en "para ti".** Saco 61 porque
+mencionaba JavaScript, era remoto y pedia 2 anos. El filtro de "esto parece
+desarrollo" estaba solo en la segunda seccion. Citar una tecnologia que tienes no
+convierte una oferta en una oferta de programador.
 
-Y una cuarta que no era un fallo sino un techo: **Adzuna recorta las
-descripciones a 500 caracteres**. Medido en la misma recoleccion contra las dos
-fuentes:
+**4. El salario delataba lo que el titulo callaba.** Una misma empresa publico
+dos ofertas con **banda salarial identica**: una decia *"Senior"* en el titulo y
+la otra no. Mismo puesto, distinto titular. Sin usar el salario como evidencia de
+seniority, la segunda era la unica que superaba el umbral — el resumen tenia un
+100% de falsos positivos.
+
+Y una quinta cosa que no era un fallo sino un techo: **la fuente principal recorta
+las descripciones a 500 caracteres**. Medido en la misma recoleccion contra las
+dos fuentes:
 
 | | descripcion media | con anos detectados |
 |---|---:|---:|
-| Adzuna | 499 car. | 2 de 19 — **11%** |
-| Remotive | 4.255 car. | 11 de 14 — **79%** |
+| Fuente A (nacional) | 499 car. | 2 de 19 — **11%** |
+| Fuente B (remoto) | 4.255 car. | 11 de 14 — **79%** |
 
 Las expresiones regulares de extraccion estaban bien desde el principio. El
 problema era el acceso al texto, no la logica — y por eso tampoco lo habria
-resuelto un modelo de IA.
+resuelto un modelo de IA: ningun modelo analiza un texto que no ha recibido.
+
+**Y una leccion de operacion:** la primera ejecucion programada pidio las 06:00
+UTC y arranco a las 10:51. Casi cinco horas tarde, porque todo el mundo programa
+en la hora en punto y las ejecuciones se encolan. Movido al minuto 23, y
+documentado en el propio workflow para que nadie lo devuelva a las 6 en punto
+pensando que queda mas limpio.
 
 ---
 
@@ -385,74 +443,73 @@ Java 21 · Spring Boot 3.4 · **Maven** · Spring Data JPA · PostgreSQL 16 ·
 Flyway · Spring RestClient · Jackson · MapStruct · commons-text (Jaro-Winkler) ·
 springdoc-openapi · Docker · GitHub Actions · Ollama (opcional)
 
-**Fuentes:** [Adzuna](https://developer.adzuna.com) (Espana, con salarios) y
-[Remotive](https://remotive.com/api-documentation) (remoto, con la descripcion
-completa). Ambas son APIs publicas y gratuitas.
+**Fuentes:** [Adzuna](https://developer.adzuna.com) (mercado nacional, con
+salarios) y [Remotive](https://remotive.com/api-documentation) (remoto, con la
+descripcion completa). Ambas son APIs publicas y gratuitas.
 
 **Tests:** JUnit 5 · AssertJ · **WireMock** · Testcontainers · JaCoCo
 
 WireMock simula las APIs externas: los tests corren **offline** y en CI, sin
-claves y sin depender de que Adzuna este arriba.
+claves y sin depender de que ninguna fuente este arriba.
 
 ---
 
 ## Limitaciones conocidas
 
-- **Adzuna recorta las descripciones a 500 caracteres.** Es el techo del sistema,
-  y esta medido: sobre 15 ofertas reales, el minimo son 482 caracteres, el maximo
-  500, y todas acaban en `…`. No es un parametro que falte usar — lo dice su
-  documentacion: *"we currently only provide a snipped of the job description"*.
-  Consecuencias medidas: la modalidad sale `DESCONOCIDA` en **12 de 15** ofertas,
-  los anos requeridos en **13 de 15**, y el detector de tecnologias solo ve las
-  que caben en el teaser. **No se arregla con un modelo de IA**: el cuello de
-  botella es el acceso al texto, no la capacidad de analizarlo, y seguir el
-  `redirect_url` para leer el anuncio entero seria scraping. Se arregla con
-  fuentes que devuelvan la descripcion completa.
-- **No cubre InfoJobs ni LinkedIn, y no puede.** LinkedIn no permite que terceros
-  agreguen sus ofertas, y de InfoJobs no consta que Adzuna las sindique. Es la
-  consecuencia directa de no hacer scraping, y es una limitacion asumida: esto
-  no sustituye a esos portales, quita el trabajo de *leer* lo que si alcanza.
-  Para el resto esta `POST /api/analizar`, que analiza una oferta pegada a mano
-  con el texto completo — mejor material, de hecho, que el que da la API de
-  Adzuna sobre sus propias ofertas.
+- **La fuente principal recorta las descripciones a 500 caracteres.** Es el techo
+  del sistema, y esta medido: sobre 15 ofertas, el minimo son 482 caracteres, el
+  maximo 500, y todas acaban en `…`. No es un parametro que falte usar — lo dice
+  su documentacion. Consecuencias medidas: la modalidad sale `DESCONOCIDA` en
+  **12 de 15** ofertas y los anos requeridos en **13 de 15**. **No se arregla con
+  un modelo de IA**: el cuello de botella es el acceso al texto, y seguir el
+  enlace para leer el anuncio entero seria scraping. Se arregla con fuentes que
+  devuelvan la descripcion completa.
+- **No cubre los grandes portales generalistas, y no puede.** Algunos no permiten
+  que terceros agreguen sus ofertas, y de otros no consta que se sindiquen. Es la
+  consecuencia directa de no hacer scraping, y es una limitacion asumida: esto no
+  sustituye a esos portales, quita el trabajo de *leer* lo que si alcanza. Para el
+  resto esta `POST /api/analizar`.
+- **No hay API publica accesible**: al ejecutarse sin servidor, el Swagger y los
+  endpoints solo existen levantandolo en local.
 - La deduplicacion **falla con ofertas de ETT** que reescriben el titulo entero.
   La huella no coincide y la similitud tampoco llega al umbral.
 - Una misma vacante **sembrada por varios municipios** genera una fila por
   municipio: la huella incluye la ubicacion. Visto en datos reales, con el mismo
-  puesto publicado en Arbo, Chantada, Mos y Pontevedra.
+  puesto publicado en cuatro localidades distintas.
 - El salario como evidencia de seniority es un **proxy parcial**: solo 3 de cada
   15 ofertas publican banda.
-- **El modelo no cabe en la EC2 gratuita.** Una t2.micro tiene 1 GB de RAM: en
-  perfil `prod` la IA va desactivada, y no es un olvido.
 - Las **fuentes en ingles introducen ruido**: muchas piden un nivel de idioma que
   no tengo. Por eso `Oferta.idioma` existe y el puntuador las trata aparte.
 - La deteccion de tecnologias solo reconoce las que estan en `perfil.yaml`. Una
   tecnologia desconocida no aparece ni como pedida ni como bandera roja.
-- El bloque de ubicacion aun no distingue "resto de Espana" de "extranjero":
+- El bloque de ubicacion aun no distingue "resto del pais" de "extranjero":
   falta el catalogo de provincias.
+- Las ejecuciones programadas **no son puntuales** y se desactivan solas en
+  repositorios sin actividad durante 60 dias.
 
 ---
 
 ## v2
 
-- **Fuentes con la descripcion completa** (Remotive, Arbeitnow, Jobicy). Es lo
-  que destapona el proyecto: con el texto entero, la deteccion de tecnologias y
-  la extraccion de anos empiezan a funcionar de verdad, y ahi si tiene sentido
-  meter un modelo. Todo lo demas son parches inteligentes alrededor de un agujero
-  de informacion.
-- Aprovechar los parametros de Adzuna que aun no se usan: `what_exclude` para no
-  gastar el cupo de resultados trayendo ofertas senior, mas `contract_time` y
-  `contract_type`, que son datos estructurados y fiables.
+- **Adaptador de correo.** Los portales que no se pueden integrar mandan alertas
+  por email si se las pides. Leer tu propio buzon no es scraping: es contenido
+  que te han enviado a ti. Un adaptador IMAP que implemente `FuenteDeOfertas`
+  daria cobertura de esos portales sin cruzar ninguna linea.
+- Aprovechar los parametros de la API que aun no se usan: excluir terminos en la
+  propia consulta para no gastar cupo trayendo ofertas senior, mas los campos
+  estructurados de tipo y jornada de contrato.
 - Catalogo de provincias para afinar el bloque de ubicacion.
 - Adaptador generico de RSS: N fuentes por el precio de una.
-- Despliegue automatico por SSH desde GitHub Actions en cada push a `main`.
-- Con un mes de datos reales del mercado junior espanol, dos graficos en este
-  README: las 15 tecnologias mas pedidas, y el salario medio junior por
-  provincia.
+- Agrupar los criterios por fuente. La fuente de remoto ignora la ubicacion, asi
+  que las combinaciones de terminos por ubicaciones le producen llamadas casi
+  identicas: 400 ofertas vistas para 14 nuevas. El deduplicador lo absorbe, pero
+  es trafico tirado.
+- Con un mes de datos acumulados, dos graficos en este README: las tecnologias
+  mas pedidas en ofertas junior, y el salario medio por provincia.
 
 ---
 
 ## Licencia
 
-[MIT](LICENSE). Usalo, copialo y modificalo con libertad; solo mantén el aviso
+[MIT](LICENSE). Usalo, copialo y modificalo con libertad; solo manten el aviso
 de copyright.
