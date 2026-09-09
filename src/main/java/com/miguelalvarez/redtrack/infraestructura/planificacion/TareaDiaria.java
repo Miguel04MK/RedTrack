@@ -23,16 +23,13 @@ public class TareaDiaria {
 
     private final RecolectarOfertasUseCase recolectar;
     private final GenerarResumenDiarioUseCase resumir;
-    private final CriteriosDeBusqueda criterios;
     private final Perfil perfil;
 
     public TareaDiaria(RecolectarOfertasUseCase recolectar,
                        GenerarResumenDiarioUseCase resumir,
-                       CriteriosDeBusqueda criterios,
                        Perfil perfil) {
         this.recolectar = recolectar;
         this.resumir = resumir;
-        this.criterios = criterios;
         this.perfil = perfil;
     }
 
@@ -40,7 +37,7 @@ public class TareaDiaria {
     public void ejecutar() {
         log.info("Arranca la recoleccion diaria");
         RecolectarOfertasUseCase.Resultado resultado = recolectar.ejecutar(
-                criterios.todos(), perfil);
+                perfil.criterios(), perfil);
         log.info("Recolectadas {} ofertas nuevas de {} vistas",
                 resultado.nuevas(), resultado.vistas());
         resumir.ejecutar(perfil);

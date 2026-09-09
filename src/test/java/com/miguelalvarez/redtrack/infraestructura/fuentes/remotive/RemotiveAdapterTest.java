@@ -41,7 +41,7 @@ class RemotiveAdapterTest {
                         .withBodyFile("remotive-respuesta.json")));
 
         adaptador = new RemotiveAdapter(
-                new RedTrackProperties(null, null,
+                new RedTrackProperties(null,
                         new RedTrackProperties.Remotive(
                                 true, "http://localhost:" + servidor.port(),
                                 "software-dev", 1.08),

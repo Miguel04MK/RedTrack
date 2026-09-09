@@ -1,5 +1,6 @@
 package com.miguelalvarez.redtrack.infraestructura.perfil;
 
+import com.miguelalvarez.redtrack.dominio.modelo.Busquedas;
 import com.miguelalvarez.redtrack.dominio.modelo.Nivel;
 import com.miguelalvarez.redtrack.dominio.modelo.Perfil;
 import com.miguelalvarez.redtrack.dominio.modelo.Preferencias;
@@ -40,9 +41,17 @@ public class CargadorDePerfil {
             }
             Perfil perfil = new Perfil(
                     leerTecnologias(raiz),
-                    leerPreferencias(raiz));
-            log.info("Perfil cargado: {} tecnologias, umbral de encaje {}",
-                    perfil.tecnologias().size(), perfil.preferencias().umbralEncaje());
+                    leerPreferencias(raiz),
+                    leerBusquedas(raiz));
+
+            log.info("Perfil cargado: {} tecnologias, umbral de encaje {}, {} criterios",
+                    perfil.tecnologias().size(), perfil.preferencias().umbralEncaje(),
+                    perfil.criterios().size());
+
+            if (perfil.criterios().isEmpty()) {
+                log.warn("El perfil no define busquedas: no se va a recolectar nada. "
+                        + "Revisa la seccion 'busquedas' de perfil.yaml");
+            }
             return perfil;
         } catch (IOException e) {
             throw new IllegalStateException("No se ha podido leer perfil.yaml", e);
@@ -75,6 +84,20 @@ public class CargadorDePerfil {
                 (List<String>) p.getOrDefault("descartar_si_titulo_contiene", List.of()),
                 entero(p.get("anos_maximos_aceptables"), 3),
                 entero(p.get("umbral_encaje"), 55));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Busquedas leerBusquedas(Map<String, Object> raiz) {
+        Map<String, Object> b = (Map<String, Object>) raiz.get("busquedas");
+        if (b == null) {
+            return Busquedas.vacias();
+        }
+        return new Busquedas(
+                (List<String>) b.getOrDefault("terminos", List.of()),
+                (List<String>) b.getOrDefault("terminos_exploratorios", List.of()),
+                (List<String>) b.getOrDefault("ubicaciones", List.of()),
+                entero(b.get("max_dias_antiguedad"), 7),
+                entero(b.get("max_resultados_por_fuente"), 50));
     }
 
     private Nivel nivel(Object valor) {

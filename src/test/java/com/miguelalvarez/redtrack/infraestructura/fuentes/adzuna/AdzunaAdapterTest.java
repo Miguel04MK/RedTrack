@@ -101,7 +101,7 @@ class AdzunaAdapterTest {
     @DisplayName("sin claves configuradas la fuente se declara inactiva")
     void sinClavesNoEstaActiva() {
         AdzunaAdapter sinClaves = new AdzunaAdapter(
-                new RedTrackProperties(null,
+                new RedTrackProperties(
                         new RedTrackProperties.Adzuna(true, "http://localhost", "es", "", ""),
                         null, null, null, null),
                 RestClient.builder(),
@@ -112,7 +112,6 @@ class AdzunaAdapterTest {
 
     private RedTrackProperties propiedadesApuntandoA(String url) {
         return new RedTrackProperties(
-                null,
                 new RedTrackProperties.Adzuna(true, url, "es", "app-id", "app-key"),
                 null, null, null, null);
     }

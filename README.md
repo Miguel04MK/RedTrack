@@ -107,10 +107,74 @@ El codigo de salida refleja si fue bien, asi que el workflow se pone **en rojo**
 cuando el radar falla. Sin eso, un fallo cuyo unico sintoma es *"no me llego un
 mensaje"* seria invisible.
 
-### En local
+---
+
+## Usarlo con tu perfil
+
+Necesitas **Docker** y unos diez minutos. Todo lo que hace falta es gratuito y
+sin tarjeta.
+
+### 1. Dos cuentas
+
+**Adzuna** — [developer.adzuna.com/signup](https://developer.adzuna.com/signup).
+Te dan `app_id` y `app_key` al momento.
+
+**Un bot de Telegram** — habla con `@BotFather`, `/newbot`, y te da un token.
+Despues **escribele algo a tu bot**: un bot no puede iniciar la conversacion, asi
+que hasta que no le hables no existe chat al que escribirte. Con eso ya puedes
+sacar tu `chat_id` de:
+
+```
+https://api.telegram.org/bot<TU_TOKEN>/getUpdates
+```
+
+Busca `"chat":{"id":...` en la respuesta. Ese numero es el tuyo.
+
+### 2. Las claves
 
 ```bash
-cp .env.example .env    # y rellenar las claves
+cp .env.example .env
+```
+
+Rellena `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `TELEGRAM_BOT_TOKEN` y
+`TELEGRAM_CHAT_ID`. El resto tiene valores por defecto que funcionan.
+
+### 3. Tu perfil
+
+Aqui esta lo importante. [`perfil.yaml`](src/main/resources/perfil.yaml) es un
+**ejemplo**: si no lo cambias, el radar puntuara ofertas contra un perfil que no
+es el tuyo.
+
+Copialo y edita tu copia, que git ignora:
+
+```bash
+cp src/main/resources/perfil.yaml perfil.local.yaml
+```
+
+Y en el `.env`:
+
+```
+REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml
+```
+
+Dentro hay tres bloques y **los tres son tuyos**:
+
+| Bloque | Que pones |
+|---|---|
+| `busquedas` | que terminos y ubicaciones consultar |
+| `tecnologias` | las que sabes, con su nivel y su peso |
+| `preferencias` | salario objetivo, nivel de idioma, umbral, titulos vetados |
+
+Sobre las tecnologias, dos cosas que no son obvias:
+
+- **`nivel` y `peso` son ejes distintos.** El nivel es cuanto la dominas; el peso
+  es cuanto importa que la oferta la pida. No son lo mismo.
+- **Lista tambien las que NO sabes**, con `nivel: NINGUNO` y peso alto. Son las
+  que generan las banderas rojas, y con peso 0 exigirlas saldria gratis.
+
+### 4. Levantarlo
+
+```bash
 docker compose up -d
 ```
 
@@ -123,6 +187,27 @@ Postgres, migraciones de Flyway y la aplicacion, con un comando.
 
 En Windows, `.\build.ps1` compila y pasa los tests, y
 `.\scripts\arrancar-local.ps1` levanta la aplicacion cargando el `.env`.
+
+Para probar sin esperar al cron:
+
+```bash
+curl -X POST localhost:8080/api/resumen -H "X-RedTrack-Token: $REDTRACK_API_TOKEN"
+```
+
+### 5. Que se ejecute solo (opcional)
+
+Haz *fork*, crea una base de datos Postgres gestionada —hay planes gratuitos— y
+pon estos secretos en tu repositorio:
+
+```
+SPRING_DATASOURCE_URL   POSTGRES_USER   POSTGRES_PASSWORD
+ADZUNA_APP_ID           ADZUNA_APP_KEY
+TELEGRAM_BOT_TOKEN      TELEGRAM_CHAT_ID
+PERFIL_YAML             <- el contenido entero de tu perfil.local.yaml
+```
+
+El workflow [`radar.yml`](.github/workflows/radar.yml) hace el resto. Ajusta el
+`cron` a tu huso: es UTC y no ajusta el cambio de hora.
 
 ---
 

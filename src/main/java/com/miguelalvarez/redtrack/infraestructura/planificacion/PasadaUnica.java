@@ -40,18 +40,15 @@ public class PasadaUnica implements ApplicationRunner {
 
     private final RecolectarOfertasUseCase recolectar;
     private final GenerarResumenDiarioUseCase resumir;
-    private final CriteriosDeBusqueda criterios;
     private final Perfil perfil;
     private final ApplicationContext contexto;
 
     public PasadaUnica(RecolectarOfertasUseCase recolectar,
                        GenerarResumenDiarioUseCase resumir,
-                       CriteriosDeBusqueda criterios,
                        Perfil perfil,
                        ApplicationContext contexto) {
         this.recolectar = recolectar;
         this.resumir = resumir;
-        this.criterios = criterios;
         this.perfil = perfil;
         this.contexto = contexto;
     }
@@ -62,7 +59,7 @@ public class PasadaUnica implements ApplicationRunner {
         try {
             log.info("Pasada unica: arranca la recoleccion");
             RecolectarOfertasUseCase.Resultado resultado = recolectar.ejecutar(
-                    criterios.todos(), perfil);
+                    perfil.criterios(), perfil);
             log.info("Recolectadas {} nuevas de {} vistas ({} duplicadas)",
                     resultado.nuevas(), resultado.vistas(), resultado.duplicadas());
 

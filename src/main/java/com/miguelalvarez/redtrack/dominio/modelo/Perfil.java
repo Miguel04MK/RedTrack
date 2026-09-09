@@ -11,11 +11,23 @@ import java.util.Optional;
  */
 public record Perfil(
         List<Tecnologia> tecnologias,
-        Preferencias preferencias
+        Preferencias preferencias,
+        Busquedas busquedas
 ) {
 
     public Perfil {
         tecnologias = tecnologias == null ? List.of() : List.copyOf(tecnologias);
+        busquedas = busquedas == null ? Busquedas.vacias() : busquedas;
+    }
+
+    /** Para los tests, que casi nunca necesitan las busquedas. */
+    public Perfil(List<Tecnologia> tecnologias, Preferencias preferencias) {
+        this(tecnologias, preferencias, Busquedas.vacias());
+    }
+
+    /** Que combinaciones de termino y ubicacion hay que consultar. */
+    public List<CriterioBusqueda> criterios() {
+        return busquedas.criterios();
     }
 
     /** Busca una tecnologia del perfil por nombre, ignorando mayusculas. */

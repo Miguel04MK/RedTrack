@@ -103,6 +103,40 @@ tecnologias:
     peso: 2
     alias: ["k8s"]
 
+# ============================================================
+#  QUE SE BUSCA
+#  Esto tambien es parte de tu perfil, no configuracion tecnica.
+# ============================================================
+
+busquedas:
+  # Tu stack. Alimentan la seccion "para ti" del resumen.
+  terminos:
+    - "java spring"
+    - "desarrollador backend junior"
+    - "java junior"
+
+  # Puestos junior de desarrollo de CUALQUIER stack, para la seccion
+  # "podrian interesarte".
+  #
+  # Tienen que ser ESPECIFICOS: buscar "junior" a secas devuelve
+  # comerciales, tecnicos de mantenimiento y practicas de administracion.
+  terminos_exploratorios:
+    - "desarrollador junior"
+    - "programador junior"
+    - "junior developer"
+    - "junior software"
+    - "becario desarrollo"
+    - "practicas programacion"
+
+  ubicaciones:
+    - "galicia"
+    - "pontevedra"
+    - "remoto"
+
+  max_dias_antiguedad: 7
+  max_resultados_por_fuente: 50
+
+
 preferencias:
   ubicaciones_deseadas:
     - galicia
