@@ -46,6 +46,24 @@ jobs:
       - name: Compilar
         run: mvn -B -q package -DskipTests
 
+      # El perfil del repositorio es un ejemplo publico. El real llega como
+      # secreto para no publicar el salario objetivo: quien lo conoce antes
+      # de negociar tiene ventaja.
+      #
+      # Si el secreto no existe, se sigue con el de ejemplo en vez de fallar:
+      # el radar funcionaria peor, pero funcionaria.
+      - name: Escribir el perfil real
+        env:
+          PERFIL_YAML: ${{ secrets.PERFIL_YAML }}
+        run: |
+          if [ -n "$PERFIL_YAML" ]; then
+            printf '%s' "$PERFIL_YAML" > perfil.local.yaml
+            echo "REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml" >> "$GITHUB_ENV"
+            echo "Usando el perfil del secreto PERFIL_YAML"
+          else
+            echo "::warning::No hay secreto PERFIL_YAML; se usa el perfil de ejemplo"
+          fi
+
       - name: Ejecutar la pasada
         env:
           SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}

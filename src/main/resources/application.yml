@@ -64,7 +64,10 @@ redtrack:
     token: ${REDTRACK_API_TOKEN:}
 
   perfil:
-    ruta: classpath:perfil.yaml
+    # El perfil del repositorio es un EJEMPLO. Para usar el tuyo sin
+    # publicarlo, apunta aqui a un fichero que git ignore:
+    #   REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml
+    ruta: ${REDTRACK_PERFIL_RUTA:classpath:perfil.yaml}
 
   busquedas:
     # Tu stack. Alimentan la seccion "para ti".

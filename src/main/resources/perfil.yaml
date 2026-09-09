@@ -1,4 +1,20 @@
 # ============================================================
+#  PERFIL DE EJEMPLO
+#
+#  Este fichero documenta el formato y sirve de valor por defecto para
+#  que el proyecto arranque nada mas clonarlo. Los numeros de la seccion
+#  "preferencias" son ilustrativos, no los de nadie.
+#
+#  Para usar el tuyo sin publicarlo, apunta a otro fichero con la
+#  variable de entorno REDTRACK_PERFIL_RUTA:
+#
+#      REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml
+#
+#  perfil.local.yaml esta en .gitignore. El salario objetivo es el dato
+#  que conviene no publicar: quien lo conoce antes de negociar tiene
+#  ventaja.
+# ============================================================
+#
 #  Perfil contra el que se puntuan las ofertas.
 #
 #  Vive fuera del codigo para poder ajustarlo sin recompilar.
@@ -95,8 +111,10 @@ preferencias:
     - a coruna
     - santiago
     - remoto
-  salario_objetivo: 24000
-  idioma_maximo: B1
+  # Bruto anual en euros. Valor de ejemplo.
+  salario_objetivo: 30000
+  # Nivel de ingles maximo que se acepta sin que salte bandera roja.
+  idioma_maximo: B2
   descartar_si_titulo_contiene:
     - senior
     - lead
