@@ -9,14 +9,20 @@ name: Radar diario
 
 on:
   schedule:
-    # 06:00 UTC = 08:00 en Madrid en horario de verano, 07:00 en invierno.
+    # 06:23 UTC = 08:23 en Madrid en horario de verano, 07:23 en invierno.
     # El cron de GitHub es siempre UTC y no ajusta el cambio de hora. Llegar
     # una hora antes en invierno es inofensivo; complicarlo con dos crons, no
     # merece la pena.
     #
-    # Aviso: los workflows programados pueden retrasarse en horas punta, y
-    # GitHub los DESACTIVA en repositorios sin actividad durante 60 dias.
-    - cron: '0 6 * * 1-5'
+    # El minuto 23 NO es capricho. Con '0 6' la primera ejecucion programada
+    # arranco a las 10:51 UTC: casi cinco horas tarde. Todo el mundo programa
+    # en la hora en punto, GitHub encola las ejecuciones y las de repositorios
+    # privados en plan gratuito van al final. Fuera de la hora en punto hay
+    # mucha menos cola.
+    #
+    # Aviso: aun asi no hay garantia de puntualidad, y GitHub DESACTIVA los
+    # workflows programados en repositorios sin actividad durante 60 dias.
+    - cron: '23 6 * * 1-5'
 
   # Para poder dispararlo a mano desde la pestana Actions.
   workflow_dispatch:
