@@ -41,7 +41,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      # El perfil se monta desde fuera de la imagen.
+      #
+      # Por defecto entra el de ejemplo, que existe siempre. Para usar el tuyo,
+      # pon en el .env:
+      #     REDTRACK_PERFIL_FICHERO=./perfil.local.yaml
+      #
+      # Sin esto, el contenedor arrancaria con el perfil de ejemplo sin avisar:
+      # el fichero local no esta en la imagen, porque el Dockerfile solo copia
+      # src y esta en .gitignore.
+      - ${REDTRACK_PERFIL_FICHERO:-./src/main/resources/perfil.yaml}:/app/perfil.yaml:ro
     environment:
+      REDTRACK_PERFIL_RUTA: file:/app/perfil.yaml
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-redtrack}
       POSTGRES_USER: ${POSTGRES_USER:-redtrack}

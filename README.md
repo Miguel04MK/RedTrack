@@ -151,11 +151,18 @@ Copialo y edita tu copia, que git ignora:
 cp src/main/resources/perfil.yaml perfil.local.yaml
 ```
 
-Y en el `.env`:
+Y en el `.env`, **las dos lineas**:
 
 ```
-REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml
+REDTRACK_PERFIL_RUTA=file:./perfil.local.yaml     # al arrancar con Maven o el IDE
+REDTRACK_PERFIL_FICHERO=./perfil.local.yaml       # al arrancar con docker compose
 ```
+
+Hacen falta las dos porque el contenedor no ve tu sistema de ficheros: la
+segunda le dice a compose que **monte** tu perfil dentro. Si te olvidas de ella,
+el contenedor arranca **con el de ejemplo y sin avisar** — el fichero local no
+esta en la imagen, porque el `Dockerfile` solo copia `src` y `perfil.local.yaml`
+esta en `.gitignore`.
 
 Dentro hay tres bloques y **los tres son tuyos**:
 
