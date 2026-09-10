@@ -37,7 +37,15 @@ public class CargadorDePerfil {
         try (InputStream in = recurso.getInputStream()) {
             Map<String, Object> raiz = new Yaml().load(in);
             if (raiz == null) {
-                throw new IllegalStateException("perfil.yaml esta vacio");
+                // El caso real: REDTRACK_PERFIL_FICHERO apunta a un fichero que
+                // no existe, docker monta uno vacio y el arranque muere sin
+                // decir por que. Un error tiene que decir que hacer.
+                throw new IllegalStateException(
+                        "El perfil esta vacio: " + recurso.getDescription() + ". "
+                        + "Si has puesto REDTRACK_PERFIL_FICHERO o REDTRACK_PERFIL_RUTA, "
+                        + "comprueba que ese fichero existe y tiene contenido "
+                        + "(cp src/main/resources/perfil.yaml perfil.local.yaml). "
+                        + "Si no lo has puesto, deberia estar usando el de ejemplo.");
             }
             Perfil perfil = new Perfil(
                     leerTecnologias(raiz),
