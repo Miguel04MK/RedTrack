@@ -1,13 +1,54 @@
 # ============================================================
-#  RedTrack - levantar todo con un solo comando:
+#  RedTrack
 #
-#      cp .env.example .env    (y rellenar)
-#      docker compose up -d
+#  Dos formas de usarlo, segun quieras el servicio encendido o no:
 #
-#  Postgres va en la misma instancia dentro de Docker, no en RDS:
-#  para este volumen de datos RDS no aporta nada y deja de ser gratis
-#  al cabo de un ano.
+#  1) Servicio permanente, con su cron interno a las 8:00
+#         cp .env.example .env    (y rellenar)
+#         docker compose up -d
+#
+#  2) Una pasada y fuera: recolecta, avisa y termina
+#         docker compose --profile radar run --rm radar
+#
+#     Util si no quieres tener nada encendido: lo lanzas cuando
+#     quieras, o lo programas desde fuera (cron, Programador de
+#     tareas de Windows...). Postgres si se queda levantado, porque
+#     ahi viven los datos.
 # ============================================================
+
+# Configuracion comun a los dos modos. Lo que cambia entre ellos esta
+# fuera de este bloque a proposito: el servicio permanente publica
+# puerto y se reinicia solo, y la pasada unica no debe hacer ninguna
+# de las dos cosas.
+x-redtrack: &redtrack
+  build: .
+  depends_on:
+    postgres:
+      condition: service_healthy
+  volumes:
+    # El perfil se monta desde fuera de la imagen.
+    #
+    # Por defecto entra el de ejemplo, que existe siempre. Para usar el tuyo,
+    # pon en el .env:
+    #     REDTRACK_PERFIL_FICHERO=./perfil.local.yaml
+    #
+    # Sin esto, el contenedor arrancaria con el perfil de ejemplo sin avisar:
+    # el fichero local no esta en la imagen, porque el Dockerfile solo copia
+    # src y esta en .gitignore.
+    - ${REDTRACK_PERFIL_FICHERO:-./src/main/resources/perfil.yaml}:/app/perfil.yaml:ro
+  environment:
+    REDTRACK_PERFIL_RUTA: file:/app/perfil.yaml
+    SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-redtrack}
+    POSTGRES_USER: ${POSTGRES_USER:-redtrack}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redtrack}
+    ADZUNA_APP_ID: ${ADZUNA_APP_ID}
+    ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+    REDTRACK_API_TOKEN: ${REDTRACK_API_TOKEN}
+    REDTRACK_IA_ACTIVA: ${REDTRACK_IA_ACTIVA:-false}
+    TZ: Europe/Madrid
 
 services:
   postgres:
@@ -35,38 +76,27 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Servicio permanente: API, Swagger y el cron interno de las 8:00.
   app:
-    build: .
+    <<: *redtrack
     container_name: redtrack-app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      # El perfil se monta desde fuera de la imagen.
-      #
-      # Por defecto entra el de ejemplo, que existe siempre. Para usar el tuyo,
-      # pon en el .env:
-      #     REDTRACK_PERFIL_FICHERO=./perfil.local.yaml
-      #
-      # Sin esto, el contenedor arrancaria con el perfil de ejemplo sin avisar:
-      # el fichero local no esta en la imagen, porque el Dockerfile solo copia
-      # src y esta en .gitignore.
-      - ${REDTRACK_PERFIL_FICHERO:-./src/main/resources/perfil.yaml}:/app/perfil.yaml:ro
-    environment:
-      REDTRACK_PERFIL_RUTA: file:/app/perfil.yaml
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-redtrack}
-      POSTGRES_USER: ${POSTGRES_USER:-redtrack}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redtrack}
-      ADZUNA_APP_ID: ${ADZUNA_APP_ID}
-      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
-      REDTRACK_IA_ACTIVA: ${REDTRACK_IA_ACTIVA:-false}
-      TZ: Europe/Madrid
     ports:
       - "8080:8080"
     restart: unless-stopped
+
+  # Una pasada y fuera. Sin puerto publicado y sin reinicio automatico:
+  # esta pensado para terminar, no para quedarse.
+  #
+  # El argumento de linea de comandos gana a la variable de entorno del
+  # bloque comun, asi que este contenedor arranca en modo una-pasada
+  # aunque SPRING_PROFILES_ACTIVE diga otra cosa.
+  #
+  # Lleva profile para que 'docker compose up -d' no lo arranque.
+  radar:
+    <<: *redtrack
+    container_name: redtrack-radar
+    profiles: ["radar"]
+    command: ["--spring.profiles.active=una-pasada"]
 
 volumes:
   redtrack-datos:
