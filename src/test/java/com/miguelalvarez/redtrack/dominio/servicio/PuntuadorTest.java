@@ -140,6 +140,64 @@ class PuntuadorTest {
     }
 
     @Nested
+    @DisplayName("una sola tecnologia confirmada no es encaje, es ignorancia")
+    class LaConfianzaEscalaConLaEvidencia {
+
+        @Test
+        @DisplayName("REGRESION: el caso Madrid, doce ofertas clavadas en 75%")
+        void elCasoMadrid() {
+            // Al ampliar la busqueda a Madrid llegaron doce ofertas con
+            // exactamente el mismo 75% y todas diciendo "Pide: Java, te falta:
+            // nada". No encajaban: la fuente recorta a 500 caracteres y ahi solo
+            // cabia una palabra. Una proporcion de uno sobre uno daba el maximo.
+            Analisis a = puntuador.analizar(
+                    comoLasDeMadrid("Desarrollador/a Java",
+                            "Buscamos Desarrollador/a Java WSO2 ..."),
+                    perfil());
+
+            assertThat(a.tecnologiasPedidas()).containsExactly("Java");
+            assertThat(a.meFaltan()).isEmpty();
+            // Antes: 65 de 65 en tecnologias -> 75. Ahora x0,50 por confianza.
+            assertThat(a.encaje()).isEqualTo(49);
+            assertThat(a.superaUmbral(UMBRAL)).isFalse();
+        }
+
+        @Test
+        @DisplayName("con dos tecnologias confirmadas si entra")
+        void dosConfirmadasSiEntran() {
+            Analisis a = puntuador.analizar(
+                    comoLasDeMadrid("Analista Programador Java",
+                            "Analista Programador Java, Spring Boot y Apis Rest ..."),
+                    perfil());
+
+            assertThat(a.lasTengo()).hasSize(2);
+            assertThat(a.superaUmbral(UMBRAL)).isTrue();
+        }
+
+        @Test
+        @DisplayName("REGRESION: 'Software Architect' no puede colarse por estar en ingles")
+        void elArquitectoEnIngles() {
+            // Los filtros solo hablaban espanol: 'arquitecto' no casa con
+            // 'Architect', ni en la lista de veto ni en el detector de
+            // seniority. Un puesto de arquitecto entraba en "para ti" con 75%.
+            Analisis a = puntuador.analizar(
+                    comoLasDeMadrid("Software Architect | Java, Microservicios, Hexagonal | Remoto",
+                            "Buscamos Software Architect con Java y Spring Boot."),
+                    perfil());
+
+            assertThat(a.senal()).isEqualTo(Seniority.SENIOR);
+            assertThat(a.encaje()).isZero();
+        }
+
+        /** Como las ofertas reales de Madrid: sin banda salarial publicada. */
+        private Oferta comoLasDeMadrid(String titulo, String descripcion) {
+            return new Oferta("adzuna", "1", titulo, "Empresa", "vigo",
+                    Modalidad.DESCONOCIDA, null, null, descripcion,
+                    "https://ejemplo", Idioma.ES, Instant.now(), Instant.now(), null);
+        }
+    }
+
+    @Nested
     @DisplayName("el salario delata la seniority que el titulo calla")
     class ElSalarioDelataLaSeniority {
 
@@ -304,6 +362,12 @@ class PuntuadorTest {
                         new Tecnologia("Angular", Nivel.NINGUNO, 0, List.of())),
                 new Preferencias(
                         List.of("vigo", "remoto"), 24000, "B1",
-                        List.of("senior", "lead", "arquitecto", "manager"), 3, UMBRAL));
+                        // Como el perfil de ejemplo que se publica: cada termino
+                        // con su pareja en ingles. La regex de seniority protege a
+                        // todos, pero esta lista es del perfil y solo protege a
+                        // quien la tenga bien.
+                        List.of("senior", "lead", "manager", "principal", "staff",
+                                "head of", "arquitecto", "architect"),
+                        3, UMBRAL));
     }
 }
