@@ -42,6 +42,20 @@ public class FormateadorTelegram {
 
     private static final int MARGEN = 60;
 
+    /**
+     * Tope por seccion, para que la primera no se coma el mensaje entero.
+     *
+     * <p>Con datos reales paso: 18 ofertas en "para ti" agotaron los 4096
+     * caracteres y la seccion "podrian interesarte" quedo reducida a su
+     * cabecera. Las 19 de esa seccion no se vieron.
+     *
+     * <p>Un resumen se lee de arriba abajo y en el movil: mas de diez por
+     * seccion no se leen igualmente. Es mejor ensenar las mejores de cada una
+     * y decir cuantas quedan, que volcar una sola lista hasta reventar.
+     */
+    private static final int MAX_PARA_TI = 10;
+    private static final int MAX_PODRIAN_INTERESARTE = 5;
+
     public String formatear(ResumenDiario resumen) {
         if (resumen.estaVacio()) {
             return sinNadaHoy(resumen);
@@ -50,11 +64,12 @@ public class FormateadorTelegram {
         StringBuilder sb = new StringBuilder();
         sb.append("*RedTrack* - ").append(cabecera(resumen)).append("\n");
 
-        boolean cabeTodo = escribirSeccion(sb, "PARA TI", null, resumen.paraTi());
+        boolean cabeTodo = escribirSeccion(sb, "PARA TI", null,
+                resumen.paraTi(), MAX_PARA_TI);
         if (cabeTodo) {
             escribirSeccion(sb, "PODRIAN INTERESARTE",
                     "_Junior de desarrollo, aunque no sea tu stack._",
-                    resumen.podrianInteresarte());
+                    resumen.podrianInteresarte(), MAX_PODRIAN_INTERESARTE);
         }
         return sb.toString();
     }
@@ -105,7 +120,7 @@ public class FormateadorTelegram {
 
     /** @return false si hubo que cortar por longitud. */
     private boolean escribirSeccion(StringBuilder sb, String titulo, String subtitulo,
-                                    List<OfertaAnalizada> ofertas) {
+                                    List<OfertaAnalizada> ofertas, int tope) {
         if (ofertas.isEmpty()) {
             return true;
         }
@@ -113,15 +128,24 @@ public class FormateadorTelegram {
         if (subtitulo != null) {
             sb.append(subtitulo).append("\n");
         }
-        for (OfertaAnalizada analizada : ofertas) {
+
+        int escritas = 0;
+        for (OfertaAnalizada analizada : ofertas.stream().limit(tope).toList()) {
             String bloque = bloqueDe(analizada);
             if (sb.length() + bloque.length() > MAX_CARACTERES - MARGEN) {
-                sb.append("\n_...y mas. Mira /api/ofertas para el resto._");
-                return false;
+                break;
             }
             sb.append(bloque);
+            escritas++;
         }
-        return true;
+
+        int restantes = ofertas.size() - escritas;
+        if (restantes > 0) {
+            sb.append("\n_y ").append(restantes)
+                    .append(restantes == 1 ? " mas en esta seccion._\n" : " mas en esta seccion._\n");
+        }
+        // Se corto por longitud, no por el tope: no cabe nada mas en el mensaje.
+        return escritas == Math.min(tope, ofertas.size());
     }
 
     private String bloqueDe(OfertaAnalizada analizada) {

@@ -149,11 +149,18 @@ preferencias:
   salario_objetivo: 30000
   # Nivel de ingles maximo que se acepta sin que salte bandera roja.
   idioma_maximo: B2
+  # Ojo con el idioma: muchas ofertas se publican en ingles, asi que cada
+  # termino necesita su pareja. Con solo "arquitecto", un "Software
+  # Architect" se colaba en el resumen.
   descartar_si_titulo_contiene:
     - senior
     - lead
-    - arquitecto
     - manager
+    - principal
+    - staff
+    - head of
+    - arquitecto
+    - architect
   anos_maximos_aceptables: 3
   # Solo entran en el resumen diario las ofertas con encaje >= a esto.
   umbral_encaje: 55

@@ -98,7 +98,7 @@ class FormateadorTelegramTest {
         }
 
         @Test
-        @DisplayName("no se pasa del limite de Telegram")
+        @DisplayName("no se pasa del limite de Telegram y dice cuantas quedan")
         void respetaElLimiteDeTelegram() {
             List<OfertaAnalizada> muchas = java.util.stream.IntStream.range(0, 200)
                     .mapToObj(i -> oferta("Desarrollador Java Junior numero " + i,
@@ -109,7 +109,31 @@ class FormateadorTelegramTest {
                     new ResumenDiario(HOY, muchas, List.of(), List.of()));
 
             assertThat(texto.length()).isLessThanOrEqualTo(FormateadorTelegram.MAX_CARACTERES);
-            assertThat(texto).contains("y mas");
+            assertThat(texto).contains("mas en esta seccion");
+        }
+
+        @Test
+        @DisplayName("REGRESION: una primera seccion enorme no se come la segunda")
+        void laPrimeraSeccionNoSeComeLaSegunda() {
+            // Con datos reales paso: 18 ofertas en "para ti" agotaron los 4096
+            // caracteres y "podrian interesarte" quedo reducida a su cabecera.
+            // Las 19 de esa seccion no se vieron ninguna.
+            List<OfertaAnalizada> muchas = java.util.stream.IntStream.range(0, 40)
+                    .mapToObj(i -> oferta("Desarrollador Java Junior numero " + i,
+                            "Empresa " + i, 80, null))
+                    .toList();
+            List<OfertaAnalizada> otras = java.util.stream.IntStream.range(0, 20)
+                    .mapToObj(i -> oferta("Programador PHP numero " + i,
+                            "Otra " + i, 30, null))
+                    .toList();
+
+            String texto = formateador.formatear(
+                    new ResumenDiario(HOY, muchas, otras, List.of()));
+
+            assertThat(texto.length()).isLessThanOrEqualTo(FormateadorTelegram.MAX_CARACTERES);
+            // La segunda seccion tiene que llegar, y con ofertas dentro.
+            assertThat(texto).contains("PODRIAN INTERESARTE");
+            assertThat(texto).contains("Programador PHP numero 0");
         }
     }
 

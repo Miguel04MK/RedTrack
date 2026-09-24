@@ -94,7 +94,7 @@ public final class Puntuador {
         Seniority senal = extractor.seniority(texto);
         Integer anos = extractor.anosRequeridos(texto);
 
-        int bruto = puntosTecnologias(pedidas, perfil)
+        int bruto = puntosTecnologias(pedidas, tengo, perfil)
                 + puntosUbicacion(oferta, perfil)
                 + puntosSalario(oferta, perfil);
 
@@ -127,7 +127,7 @@ public final class Puntuador {
      * bajara un punto. El peso mide lo que importa que la oferta la pida; que
      * se tenga o no ya lo dice el nivel.
      */
-    int puntosTecnologias(Set<String> pedidas, Perfil perfil) {
+    int puntosTecnologias(Set<String> pedidas, Set<String> tengo, Perfil perfil) {
         if (pedidas.isEmpty()) {
             return 0;
         }
@@ -144,7 +144,43 @@ public final class Puntuador {
         if (denominador == 0) {
             return 0;
         }
-        return (int) Math.round(MAX_TECNOLOGIAS * (numerador / denominador));
+        return (int) Math.round(
+                MAX_TECNOLOGIAS * (numerador / denominador) * confianza(tengo.size()));
+    }
+
+    /**
+     * Cuanta evidencia sostiene la proporcion anterior.
+     *
+     * <p>Sin esto, una oferta en la que solo se detecta "Java" sacaba el maximo
+     * del bloque: proporcion perfecta, un acierto sobre un total de uno. Con
+     * datos reales paso justo eso — doce ofertas de Madrid con exactamente el
+     * mismo 75%, todas diciendo "Pide: Java, te falta: nada", porque la fuente
+     * recorta la descripcion a 500 caracteres y ahi solo cabe una palabra.
+     *
+     * <p>El problema no era la formula: era que medía la ignorancia como si
+     * fuera coincidencia. Una sola tecnologia confirmada no significa que la
+     * oferta encaje, significa que no sabemos casi nada de ella.
+     *
+     * <p><b>Cuenta las TUYAS confirmadas, no las detectadas.</b> Esa distincion
+     * no es un matiz: contando las detectadas, anadir una tecnologia que NO
+     * tienes subiria el contador y con el la nota, premiando justo lo que
+     * deberia penalizar. Es el mismo fallo del {@code peso: 0} entrando por
+     * otra puerta, y lo destapo su test de regresion.
+     *
+     * <p>Asi la funcion es monotona en la direccion correcta: anadir algo que
+     * no tienes deja la confianza igual y empeora la proporcion, luego siempre
+     * baja la nota.
+     *
+     * <p>No penaliza a la oferta, penaliza a la falta de informacion. Cuando la
+     * fuente da el texto completo se confirman varias y el factor desaparece.
+     */
+    double confianza(int tecnologiasTuyasConfirmadas) {
+        return switch (tecnologiasTuyasConfirmadas) {
+            case 0 -> 0.00;
+            case 1 -> 0.50;
+            case 2 -> 0.75;
+            default -> 1.00;
+        };
     }
 
     /** 20 pts. */

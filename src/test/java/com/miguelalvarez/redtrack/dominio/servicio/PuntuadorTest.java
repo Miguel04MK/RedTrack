@@ -33,7 +33,7 @@ class PuntuadorTest {
     class LaSeniorityMultiplica {
 
         @Test
-        @DisplayName("la oferta perfecta para un junior saca 100")
+        @DisplayName("la mejor oferta posible con dos tecnologias confirmadas saca 84")
         void ofertaPerfecta() {
             Analisis a = puntuador.analizar(oferta(
                     "Desarrollador Java Junior",
@@ -41,11 +41,12 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.senal()).isEqualTo(Seniority.JUNIOR);
-            assertThat(a.encaje()).isEqualTo(100);
+            // 65 x 1,00 x confianza(2 confirmadas) = 49, + 20 ubicacion + 15 salario
+            assertThat(a.encaje()).isEqualTo(84);
         }
 
         @Test
-        @DisplayName("la misma oferta sin decir seniority se queda en 85")
+        @DisplayName("la misma oferta sin decir seniority se queda en 77")
         void mismaOfertaSinDecirNada() {
             Analisis a = puntuador.analizar(oferta(
                     "Desarrollador Java",
@@ -53,7 +54,7 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.senal()).isEqualTo(Seniority.NO_DICE);
-            assertThat(a.encaje()).isEqualTo(92);
+            assertThat(a.encaje()).isEqualTo(77);
         }
 
         @Test
@@ -68,7 +69,7 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.senal()).isEqualTo(Seniority.SENIOR);
-            assertThat(a.encaje()).isEqualTo(18);
+            assertThat(a.encaje()).isEqualTo(15);
             assertThat(a.superaUmbral(UMBRAL)).isFalse();
         }
 
@@ -102,8 +103,8 @@ class PuntuadorTest {
 
             assertThat(a.senal()).isEqualTo(Seniority.MID);
             assertThat(a.anosRequeridos()).isEqualTo(2);
-            // 100 bruto x MID 0.75 x dos anos 0.92
-            assertThat(a.encaje()).isEqualTo(69);
+            // 84 bruto x MID 0,75 x dos anos 0,92
+            assertThat(a.encaje()).isEqualTo(58);
             assertThat(a.superaUmbral(UMBRAL)).isTrue();
         }
 
@@ -119,7 +120,7 @@ class PuntuadorTest {
             assertThat(a.anosRequeridos()).isEqualTo(4);
             // Misma etiqueta que el test anterior, mismo encaje bruto:
             // lo unico que cambia son los anos, y decide.
-            assertThat(a.encaje()).isEqualTo(30);
+            assertThat(a.encaje()).isEqualTo(25);
             assertThat(a.superaUmbral(UMBRAL)).isFalse();
         }
 
@@ -260,8 +261,8 @@ class PuntuadorTest {
                     perfil());
 
             assertThat(a.anosRequeridos()).isEqualTo(6);
-            // Encaje perfecto (100 bruto) x JUNIOR 1.00 x seis anos 0.20
-            assertThat(a.encaje()).isEqualTo(20);
+            // 84 bruto x JUNIOR 1,00 x seis anos 0,20
+            assertThat(a.encaje()).isEqualTo(17);
             assertThat(a.banderasRojas()).anyMatch(b -> b.contains("6 anos"));
         }
 

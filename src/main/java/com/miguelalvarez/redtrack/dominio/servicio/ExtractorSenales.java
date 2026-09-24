@@ -35,9 +35,15 @@ public final class ExtractorSenales {
             "\\bjunior\\b|\\bj[úu]nior\\b|\\bjr\\.?\\b|reci[ée]n titulad|sin experiencia|"
                     + "\\btrainee\\b|\\bbecari|\\bentry[\\s-]level\\b",
             Pattern.CASE_INSENSITIVE);
+    /**
+     * Ojo con el idioma: las ofertas de Madrid publican medio catalogo en
+     * ingles. Con solo {@code arquitect}, un "Software Architect" pasaba como
+     * si no dijera nada de seniority y entraba en el resumen con un 75%.
+     */
     private static final Pattern SENIOR = Pattern.compile(
-            "\\bsenior\\b|\\bs[ée]nior\\b|\\bsr\\.?\\b|\\blead\\b|\\barquitect|\\bprincipal\\b|"
-                    + "\\bstaff\\b|\\bmanager\\b",
+            "\\bsenior\\b|\\bs[ée]nior\\b|\\bsr\\.?\\b|\\blead\\b|\\bprincipal\\b|"
+                    + "\\bstaff\\b|\\bmanager\\b|\\bhead\\s+of\\b|"
+                    + "\\barquitect|\\barchitect",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern MID = Pattern.compile(
             "\\bmid\\b|\\bmid[\\s-]level\\b|\\bsemi[\\s-]?senior\\b|\\bintermedio\\b",
